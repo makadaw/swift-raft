@@ -1,0 +1,86 @@
+syntax = "proto3";
+package raft;
+
+// Votes types
+enum VoteType {
+    PreVote = 0;
+    Vote = 1;
+}
+
+// Invoked by candidates to gather votes or if they can win an election
+message RequestVote {
+    message Request {
+        // vote type
+        VoteType type = 1;
+
+        // candidate’s term
+        uint64 term = 2;
+
+        // candidate requesting vote
+        uint64 candidateId = 3;
+
+        // index of candidate’s last log entry
+        uint64 lastLogIndex = 4;
+
+        // term of candidate’s last log entry
+        uint64 lastLogTerm = 5;
+    }
+    message Response {
+        // vote type
+        VoteType type = 1;
+
+        // currentTerm, for candidate to update itself
+        uint64 term = 2;
+
+        // true means candidate received vote
+        bool voteGranted = 3;
+    }
+}
+
+// raft message entry, can be a configuration entry or data (log, snapshot)
+message Entry {
+
+}
+
+// invoked by leader to replicate log entries, also used as heartbeat
+message AppendEntries {
+    message Request {
+        // leader’s term
+        uint64 term = 1;
+
+        // so follower can redirect clients
+        uint64 leaderId = 2;
+
+        // index of log entry immediately preceding new ones
+        uint64 prevLogIndex = 3;
+
+        // term of prevLogIndex entry
+        uint64 prevLogTerm = 4;
+
+        // log entries to store (empty for heartbeat; may send more than one for efficiency)
+        repeated Entry entries = 5;
+
+        // leader’s commitIndex
+        uint64 leaderCommit = 6;
+    }
+    message Response {
+        // currentTerm, for leader to update itself
+        uint64 term = 1;
+
+        // true if follower contained entry matching prevLogIndex and prevLogTerm
+        bool success = 2;
+    }
+}
+
+// RPC Addon
+
+option java_multiple_files = true;
+option java_outer_classname = "RaftProto";
+
+service Raft {
+    // Vote/PreVote messages. Invoked by candidates to gather votes
+    rpc RequestVote (RequestVote.Request) returns (RequestVote.Response) {}
+
+    // send an AppendEntries. Invoked by leader to replicate log entries (§5.3); also used as heartbeat (§5.2).
+    rpc AppendEntries (AppendEntries.Request) returns (AppendEntries.Response) {}
+}

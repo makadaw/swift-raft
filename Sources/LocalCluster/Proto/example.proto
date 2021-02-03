@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: MIT
+// Copyright © 2021 makadaw
+syntax = "proto3";
+
+enum CommandType {
+    Set = 0;
+    Add = 1;
+    Minus = 2;
+}
+
+// Commands used for simple state machine
+message Command {
+    // Type of the operation
+    CommandType type = 1;
+
+    // Value
+    int64 value = 2;
+}
