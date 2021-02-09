@@ -265,7 +265,7 @@ extension ConsensusService {
     private func startVote(isPreVote: Bool) -> EventLoopFuture<Bool> {
         let resultPromise = group.next().makePromise(of: Bool.self)
         let allReqeusts = group.next().flatSubmit { () -> EventLoopFuture<Void> in
-            let termId = self.lock.withLock { () -> UInt64 in
+            let termId = self.lock.withLock { () -> Term.Id in
                 let next = self.term.nextTerm()
                 if !isPreVote {
                     self.term = next

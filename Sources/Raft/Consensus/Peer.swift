@@ -30,7 +30,7 @@ class Peer {
         self.client = Raft_RaftClient(channel: channel)
     }
 
-    func requestVote(isPreVote: Bool = false, term: UInt64) -> EventLoopFuture<Bool> {
+    func requestVote(isPreVote: Bool = false, term: Term.Id) -> EventLoopFuture<Bool> {
         let request = Raft_RequestVote.Request.with {
             $0.type = isPreVote ? .preVote : .vote
             $0.candidateID = myself

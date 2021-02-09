@@ -4,16 +4,17 @@
 
 /// Node term description. Collect togeather a term id and vote of the current term
 struct Term {
+    typealias Id = UInt64
 
     enum Error: Swift.Error {
-        case newTermLessThenCurrent(UInt64, UInt64)
+        case newTermLessThenCurrent(Id, Id)
     }
 
     /// Current node
     let myself: NodeId
 
     /// Latest term node has seen, increases monotonically
-    private(set) var id: UInt64
+    private(set) var id: Id
 
     /// `candidateId` that received vote in current term
     private(set) var votedFor: NodeId?
@@ -21,11 +22,11 @@ struct Term {
     /// Current term leader
     var leader: NodeId?
 
-    init(myself: NodeId, id: UInt64 = 0) {
+    init(myself: NodeId, id: Id = 0) {
         self.init(myself: myself, id: id, votedFor: nil, leader: nil)
     }
 
-    private init(myself: NodeId, id: UInt64, votedFor: NodeId?, leader: NodeId?) {
+    private init(myself: NodeId, id: Id, votedFor: NodeId?, leader: NodeId?) {
         self.myself = myself
         self.id = id
         self.votedFor = votedFor
@@ -44,7 +45,7 @@ struct Term {
     ///   - newTerm: new term id
     ///   - from: node that send us a message with higher term
     /// - Throws: error if new term is less then current
-    mutating func tryToUpdateTerm(newTerm: UInt64, from: NodeId) throws {
+    mutating func tryToUpdateTerm(newTerm: Id, from: NodeId) throws {
         guard newTerm > id else {
             throw Error.newTermLessThenCurrent(newTerm, id)
         }
@@ -56,7 +57,7 @@ struct Term {
     ///   - term: next term to check
     ///   - from: node id that proposed it
     /// - Returns: true if node already voted for this term and candidate or accepted new term and vote for the candidate
-    mutating func canAcceptNewTerm(_ term: UInt64, from: NodeId) -> Bool {
+    mutating func canAcceptNewTerm(_ term: Id, from: NodeId) -> Bool {
         if id > term { // Current term is higher, we don't accpet elections from past
             return false
         } else if id == term && votedFor != from { // We already voted in this term for other candidate
@@ -68,7 +69,7 @@ struct Term {
         return true
     }
 
-    mutating private func updateTerm(newTerm: UInt64, from: NodeId? = nil) {
+    mutating private func updateTerm(newTerm: Id, from: NodeId? = nil) {
         id = newTerm
         votedFor = from
         leader = nil
