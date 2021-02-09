@@ -18,7 +18,7 @@ class ConsensusService {
 
     private let group: EventLoopGroup
     private let config: Configuration
-    private let log: Logger
+    private let logger: Logger
     var interceptors: Raft_RaftServerInterceptorFactoryProtocol?
 
     /// Current node id
@@ -26,7 +26,7 @@ class ConsensusService {
         config.server.id
     }
 
-    /// List of acctive peers for the current node
+    /// List of active peers for the current node
     private var peers: [Peer]
 
     /// Node current state, should not be changed directly, only via `tryBecome...` methods. Node start as a follower
@@ -46,7 +46,7 @@ class ConsensusService {
         self.group = group
         self.config = config
         self.peers = peers
-        self.log = log
+        self.logger = log
         self.term = Term(myself: config.server.id)
     }
 
@@ -131,7 +131,7 @@ extension ConsensusService: Raft_RaftProvider {
             $0.term = request.term
             $0.voteGranted = granted
         }
-        log.debug("Vote response \(response.voteGranted)", metadata: [
+        logger.debug("Vote response \(response.voteGranted)", metadata: [
             "vote/self": "\(myself)",
             "vote/candidate": "\(request.candidateID)",
             "vote/granted": "\(response.voteGranted)"
@@ -158,7 +158,7 @@ extension ConsensusService: Raft_RaftProvider {
                 do {
                     try self.term.tryToUpdateTerm(newTerm: request.term, from: request.leaderID)
                 } catch let error {
-                    log.error("\(error)")
+                    logger.error("\(error)")
                 }
                 return (true, self.term)
             }
@@ -171,7 +171,7 @@ extension ConsensusService: Raft_RaftProvider {
         if shouldStepDown {
             // Next method have own lock, should be called not from lock
             if !tryBecomeFollower() {
-                log.debug("Got term greate than current and failed to move to the follower")
+                logger.debug("Got term greate than current and failed to move to the follower")
             }
             let response = Raft_AppendEntries.Response.with {
                 $0.term = term.id
@@ -186,7 +186,7 @@ extension ConsensusService: Raft_RaftProvider {
             $0.success = tryBecomeFollower()
         }
 
-        log.debug("Recive message", metadata: [
+        logger.debug("Receive message", metadata: [
             "message/term": "\(term.id)",
             "message/leader": "\(term.leader ?? 0)"
         ])
@@ -202,7 +202,7 @@ extension ConsensusService {
     }
 
     /// Election timer if reached will initiate a vote, reset it if we are still in the valid state
-    /// - when get a heartbite in follower state
+    /// - when get a heartbeat in follower state
     /// - when vote failed and we need to restart a round
     func resetElectionTimer() {
         // cancel old timer
@@ -215,12 +215,12 @@ extension ConsensusService {
         electionTimer = group.next().scheduleTask(in: timeout, electionTimeout)
     }
 
-    /// Election timout fired, if node is not a leader start a campaign
+    /// Election timeout fired, if node is not a leader start a campaign
     func electionTimeout() {
         if case .leader = state {
             return
         }
-        log.debug("Node \(myself) would start an election campaign")
+        logger.debug("Node \(myself) would start an election campaign")
         if !tryBecomePreCandidate() {
             // Failed to switch state, just reset an election timer and wait for a next round
             resetElectionTimer()
@@ -239,7 +239,7 @@ extension ConsensusService {
             }
         }
         vote.whenFailure { err in
-            self.log.error("Lost a preVote with \(err)")
+            self.logger.error("Lost a preVote with \(err)")
             self.resetElectionTimer()
         }
     }
@@ -248,16 +248,16 @@ extension ConsensusService {
     func startVote() {
         let vote = startVote(isPreVote: false)
         vote.whenSuccess { result in
-            self.log.debug("Finish campign", metadata: [
+            self.logger.debug("Finish campign", metadata: [
                 "vote/result": "\(result)",
                 "vote/term": "\(self.term)"
             ])
             if !(result && self.tryBecomeLeader()) { // Won an election
-                self.log.debug("Failed to become a leader for \(self.term) term")
+                self.logger.debug("Failed to become a leader for \(self.term) term")
             }
         }
         vote.whenFailure { err in
-            self.log.debug("Failed to finish election with error \(err)")
+            self.logger.debug("Failed to finish election with error \(err)")
         }
         self.resetElectionTimer()
     }
@@ -275,7 +275,7 @@ extension ConsensusService {
             let tallyVotes = self.peers.quorumSize
             let grantedVotes: NIOAtomic<UInt> = NIOAtomic.makeAtomic(value: 1) // We already votes for ourself
 
-            self.log.debug("Starting a \(isPreVote ? "pre " : "")campign", metadata: [
+            self.logger.debug("Starting a \(isPreVote ? "pre " : "")campign", metadata: [
                 "vote/term": "\(termId)",
                 "vote/type": isPreVote ? "pre" : "real",
             ])
@@ -326,7 +326,7 @@ extension ConsensusService {
 
     func heartbeat(task: RepeatedTask) -> EventLoopFuture<Void> {
         guard case .leader = state else {
-            log.error("Not a leader tried to send a heartbeat message")
+            logger.error("Not a leader tried to send a heartbeat message")
             heartbeatTask?.cancel()
             return group.next().makeFailedFuture(AppendLogError.notALeaderTryToHeartbeat)
         }
@@ -350,7 +350,7 @@ extension ConsensusService.State {
             return true
         case (.candidate, .leader), (.candidate, .follower):
             return true
-        // Technicaly we should move from a leader only to a follower, but it's important to step down in any case
+        // Technically we should move from a leader only to a follower, but it's important to step down in any case
         case (.leader, _):
             return true
         default:
