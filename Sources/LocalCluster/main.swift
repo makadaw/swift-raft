@@ -50,7 +50,6 @@ struct Start: ParsableCommand {
                     start: .sync { raftNode.start() },
                     shutdown: .sync {
                         try raftNode.shutdown()?.wait()
-//                        try group.syncShutdownGracefully()
                     })
             }
 
