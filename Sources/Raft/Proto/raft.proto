@@ -37,9 +37,33 @@ message RequestVote {
     }
 }
 
+enum EntryType {
+
+    // default type that can be used as a fallback
+    Unknown = 0;
+
+    // TODO
+    // use to pass configurations beetwen nodes (peers changes, etc)
+    Configuration = 1;
+
+    // represent a command to a log
+    Data = 2;
+}
+
 // raft message entry, can be a configuration entry or data (log, snapshot)
 message Entry {
 
+    // term in which entry was created
+    uint64 term = 1;
+
+    // entry type
+    EntryType type = 2;
+
+    // entry index used by leader
+    uint64 index = 3;
+
+    // command content for an entry
+    bytes data = 4;
 }
 
 // invoked by leader to replicate log entries, also used as heartbeat
@@ -70,6 +94,13 @@ message AppendEntries {
         // true if follower contained entry matching prevLogIndex and prevLogTerm
         bool success = 2;
     }
+}
+
+message LogMetadata {
+    optional uint64 term = 1;
+
+    optional uint64 vote_for = 2;
+    
 }
 
 // RPC Addon

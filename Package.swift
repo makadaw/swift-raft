@@ -16,7 +16,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log", from: "1.4.0"),
-        .package(url: "https://github.com/grpc/grpc-swift", from: "1.0.0-alpha.22"),
+        .package(url: "https://github.com/grpc/grpc-swift", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "1.0.0-alpha.6"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.2"),
     ],
@@ -28,7 +28,7 @@ let package = Package(
                 .product(name: "Lifecycle", package: "swift-service-lifecycle"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            exclude: ["Proto/example.proto"]),
+            exclude: ["Proto/example.proto", "Proto/log.proto"]),
         .target(
             name: "Raft",
             dependencies: [

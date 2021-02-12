@@ -61,6 +61,57 @@ extension Raft_VoteType: CaseIterable {
 
 #endif  // swift(>=4.2)
 
+enum Raft_EntryType: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// default type that can be used as a fallback
+  case unknown // = 0
+
+  /// TODO
+  /// use to pass configurations beetwen nodes (peers changes, etc)
+  case configuration // = 1
+
+  /// represent a command to a log
+  case data // = 2
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unknown
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unknown
+    case 1: self = .configuration
+    case 2: self = .data
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unknown: return 0
+    case .configuration: return 1
+    case .data: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Raft_EntryType: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Raft_EntryType] = [
+    .unknown,
+    .configuration,
+    .data,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 /// Invoked by candidates to gather votes or if they can win an election
 struct Raft_RequestVote {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -116,18 +167,30 @@ struct Raft_RequestVote {
   init() {}
 }
 
-/// Raft message entry, can be a configuration entry or data (log, snapshot)
+/// raft message entry, can be a configuration entry or data (log, snapshot)
 struct Raft_Entry {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  /// term in which entry was created
+  var term: UInt64 = 0
+
+  /// entry type
+  var type: Raft_EntryType = .unknown
+
+  /// entry index used by leader
+  var index: UInt64 = 0
+
+  /// command content for an entry
+  var data: Data = Data()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 }
 
-/// Invoked by leader to replicate log entries, also used as heartbeat
+/// invoked by leader to replicate log entries, also used as heartbeat
 struct Raft_AppendEntries {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -182,6 +245,37 @@ struct Raft_AppendEntries {
   init() {}
 }
 
+struct Raft_LogMetadata {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var term: UInt64 {
+    get {return _term ?? 0}
+    set {_term = newValue}
+  }
+  /// Returns true if `term` has been explicitly set.
+  var hasTerm: Bool {return self._term != nil}
+  /// Clears the value of `term`. Subsequent reads from it will return its default value.
+  mutating func clearTerm() {self._term = nil}
+
+  var voteFor: UInt64 {
+    get {return _voteFor ?? 0}
+    set {_voteFor = newValue}
+  }
+  /// Returns true if `voteFor` has been explicitly set.
+  var hasVoteFor: Bool {return self._voteFor != nil}
+  /// Clears the value of `voteFor`. Subsequent reads from it will return its default value.
+  mutating func clearVoteFor() {self._voteFor = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _term: UInt64? = nil
+  fileprivate var _voteFor: UInt64? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "raft"
@@ -190,6 +284,14 @@ extension Raft_VoteType: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "PreVote"),
     1: .same(proto: "Vote"),
+  ]
+}
+
+extension Raft_EntryType: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "Unknown"),
+    1: .same(proto: "Configuration"),
+    2: .same(proto: "Data"),
   ]
 }
 
@@ -314,18 +416,49 @@ extension Raft_RequestVote.Response: SwiftProtobuf.Message, SwiftProtobuf._Messa
 
 extension Raft_Entry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Entry"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "term"),
+    2: .same(proto: "type"),
+    3: .same(proto: "index"),
+    4: .same(proto: "data"),
+  ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.term) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.index) }()
+      case 4: try { try decoder.decodeSingularBytesField(value: &self.data) }()
+      default: break
+      }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.term != 0 {
+      try visitor.visitSingularUInt64Field(value: self.term, fieldNumber: 1)
+    }
+    if self.type != .unknown {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 2)
+    }
+    if self.index != 0 {
+      try visitor.visitSingularUInt64Field(value: self.index, fieldNumber: 3)
+    }
+    if !self.data.isEmpty {
+      try visitor.visitSingularBytesField(value: self.data, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Raft_Entry, rhs: Raft_Entry) -> Bool {
+    if lhs.term != rhs.term {return false}
+    if lhs.type != rhs.type {return false}
+    if lhs.index != rhs.index {return false}
+    if lhs.data != rhs.data {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -445,6 +578,44 @@ extension Raft_AppendEntries.Response: SwiftProtobuf.Message, SwiftProtobuf._Mes
   static func ==(lhs: Raft_AppendEntries.Response, rhs: Raft_AppendEntries.Response) -> Bool {
     if lhs.term != rhs.term {return false}
     if lhs.success != rhs.success {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Raft_LogMetadata: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".LogMetadata"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "term"),
+    2: .standard(proto: "vote_for"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self._term) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self._voteFor) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if let v = self._term {
+      try visitor.visitSingularUInt64Field(value: v, fieldNumber: 1)
+    }
+    if let v = self._voteFor {
+      try visitor.visitSingularUInt64Field(value: v, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Raft_LogMetadata, rhs: Raft_LogMetadata) -> Bool {
+    if lhs._term != rhs._term {return false}
+    if lhs._voteFor != rhs._voteFor {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

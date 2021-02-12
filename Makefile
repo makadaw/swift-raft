@@ -17,9 +17,6 @@ SWIFT_BUILD_RELEASE:=${SWIFT} build ${SWIFT_FLAGS_RELEASE}
 SWIFT_TEST:=${SWIFT} test ${SWIFT_FLAGS}
 SWIFT_PACKAGE:=${SWIFT} package ${SWIFT_FLAGS}
 
-# Name of generated xcodeproj
-XCODEPROJ:=GRPC.xcodeproj
-
 ### Package and plugin build targets ###########################################
 
 all:
@@ -30,17 +27,15 @@ Package.resolved:
 
 ${PROTOC_GEN_GRPC_SWIFT}: Package.resolved
 	${SWIFT_BUILD_RELEASE} --product protoc-gen-grpc-swift
+	${SWIFT_BUILD_RELEASE} --product protoc-gen-swift
 
-### Xcodeproj
-
-.PHONY:
-project: ${XCODEPROJ}
 
 ### Protobuf Generation ########################################################
 
 %.pb.swift: %.proto ${PROTOC_GEN_SWIFT}
 	protoc $< \
 		--proto_path=$(dir $<) \
+		--experimental_allow_proto3_optional \
 		--plugin=${PROTOC_GEN_SWIFT} \
 		--swift_opt=Visibility=Internal \
 		--swift_out=$(dir $<)
@@ -48,6 +43,7 @@ project: ${XCODEPROJ}
 %.grpc.swift: %.proto ${PROTOC_GEN_GRPC_SWIFT}
 	protoc $< \
 		--proto_path=$(dir $<) \
+		--experimental_allow_proto3_optional \
 		--plugin=${PROTOC_GEN_GRPC_SWIFT} \
 		--grpc-swift_opt=Visibility=Internal \
 		--grpc-swift_out=$(dir $<)
@@ -87,4 +83,3 @@ LocalCluster:
 .PHONY:
 clean:
 	-rm -rf ${SWIFT_BUILD_PATH}
-	-rm -rf ${XCODEPROJ}

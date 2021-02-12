@@ -130,30 +130,28 @@ extension Raft_RaftProvider {
 
   /// Determines, calls and returns the appropriate request handler, depending on the request's method.
   /// Returns nil for methods not handled by this service.
-  internal func handleMethod(
-    _ methodName: Substring,
-    callHandlerContext: CallHandlerContext
-  ) -> GRPCCallHandler? {
-    switch methodName {
+  internal func handle(
+    method name: Substring,
+    context: CallHandlerContext
+  ) -> GRPCServerHandlerProtocol? {
+    switch name {
     case "RequestVote":
-      return CallHandlerFactory.makeUnary(
-        callHandlerContext: callHandlerContext,
-        interceptors: self.interceptors?.makeRequestVoteInterceptors() ?? []
-      ) { context in
-        return { request in
-          self.requestVote(request: request, context: context)
-        }
-      }
+      return UnaryServerHandler(
+        context: context,
+        requestDeserializer: ProtobufDeserializer<Raft_RequestVote.Request>(),
+        responseSerializer: ProtobufSerializer<Raft_RequestVote.Response>(),
+        interceptors: self.interceptors?.makeRequestVoteInterceptors() ?? [],
+        userFunction: self.requestVote(request:context:)
+      )
 
     case "AppendEntries":
-      return CallHandlerFactory.makeUnary(
-        callHandlerContext: callHandlerContext,
-        interceptors: self.interceptors?.makeAppendEntriesInterceptors() ?? []
-      ) { context in
-        return { request in
-          self.appendEntries(request: request, context: context)
-        }
-      }
+      return UnaryServerHandler(
+        context: context,
+        requestDeserializer: ProtobufDeserializer<Raft_AppendEntries.Request>(),
+        responseSerializer: ProtobufSerializer<Raft_AppendEntries.Response>(),
+        interceptors: self.interceptors?.makeAppendEntriesInterceptors() ?? [],
+        userFunction: self.appendEntries(request:context:)
+      )
 
     default:
       return nil
