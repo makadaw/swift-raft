@@ -7,7 +7,7 @@ import NIOConcurrencyHelpers
 import Logging
 
 /// Implementation of RPC service for Raft consensus
-class ConsensusService {
+class ConsensusService<ApplicationLog> where ApplicationLog: Log {
 
     enum State {
         case follower
@@ -35,19 +35,39 @@ class ConsensusService {
 
     /// Latest term server has seen, increases monotonically
     /// Lock value
-    private(set) var term: Term
+    private(set) var term: Term {
+        didSet {
+            // Update term in the log
+            self.log.metadata.updateTerm(term)
+        }
+    }
+
+    /// Application log
+    var log: ApplicationLog
 
     private let lock: Lock = .init()
     // Timers
     var electionTimer: Scheduled<Void>?
     var heartbeatTask: RepeatedTask?
 
-    init(group: EventLoopGroup, config: Configuration, peers: [Peer], log: Logger) {
+    init(group: EventLoopGroup, config: Configuration, peers: [Peer], log: ApplicationLog, logger: Logger) {
         self.group = group
         self.config = config
         self.peers = peers
-        self.logger = log
-        self.term = Term(myself: config.server.id)
+        self.logger = logger
+
+        self.log = log
+        self.log.filter({ element in
+            if case .configuration = element {
+                return true
+            }
+            return false
+        }).forEach { entity in
+            // TODO apply configurations from the log
+            print("Configuration \(entity)")
+        }
+        self.logger.debug("The log contains indexes \(log.logStartIndex) through \(log.logLastIndex)")
+        self.term = Term(myself: config.server.id, id: log.metadata.termId ?? 0)
     }
 
     func onStart() {
@@ -119,16 +139,22 @@ extension ConsensusService: Raft_RaftProvider {
             }
         }
 
-        let granted: Bool = lock.withLock {
+        let (granted, currentTermId) = lock.withLock { () -> (Bool, Term.Id) in
+            let lastLogTerm = self.log.metadata.termId ?? 0
+            // If the caller has a less complete log, we can't give it our vote.
+            let isLogOk = request.lastLogTerm > lastLogTerm
+                        || (request.lastLogTerm == lastLogTerm
+                            && request.lastLogIndex >= self.log.logLastIndex)
             if request.type == .preVote {
-                return request.term > term.id
+                return (isLogOk && request.term > term.id, term.id)
             } else {
-                return term.canAcceptNewTerm(request.term, from: request.candidateID)
+
+                return (isLogOk && term.canAcceptNewTerm(request.term, from: request.candidateID), term.id)
             }
         }
         let response = Raft_RequestVote.Response.with {
             $0.type = request.type
-            $0.term = request.term
+            $0.term = currentTermId
             $0.voteGranted = granted
         }
         logger.debug("Vote response \(response.voteGranted)", metadata: [
@@ -152,7 +178,7 @@ extension ConsensusService: Raft_RaftProvider {
             }
         }
 
-        let messageCheck: (Bool, Term) = lock.withLock {
+        let (shouldStepDown, term) = lock.withLock { () -> (Bool, Term) in
             if request.term > self.term.id {
                 // got a message with higher term, step down to a follower
                 do {
@@ -167,7 +193,6 @@ extension ConsensusService: Raft_RaftProvider {
             }
             return (false, self.term)
         }
-        let (shouldStepDown, term) = messageCheck
         if shouldStepDown {
             // Next method have own lock, should be called not from lock
             if !tryBecomeFollower() {
@@ -209,7 +234,7 @@ extension ConsensusService {
         if let electionTimer = electionTimer {
             electionTimer.cancel()
         }
-        // randomize election timer
+        // randomise election timer
         let timeout = config.electionTimeout
             + .nanoseconds(Int64.random(in: 1000...config.electionTimeout.nanoseconds))
         electionTimer = group.next().scheduleTask(in: timeout, electionTimeout)
@@ -264,13 +289,13 @@ extension ConsensusService {
 
     private func startVote(isPreVote: Bool) -> EventLoopFuture<Bool> {
         let resultPromise = group.next().makePromise(of: Bool.self)
-        let allReqeusts = group.next().flatSubmit { () -> EventLoopFuture<Void> in
-            let termId = self.lock.withLock { () -> Term.Id in
+        let allRequests = group.next().flatSubmit { () -> EventLoopFuture<Void> in
+            let (termId, lastLogIndex, lastLogTerm) = self.lock.withLock { () -> (Term.Id, UInt, Term.Id) in
                 let next = self.term.nextTerm()
                 if !isPreVote {
                     self.term = next
                 }
-                return next.id
+                return (next.id, self.log.logLastIndex, self.log.metadata.termId ?? 0)
             }
             let tallyVotes = self.peers.quorumSize
             let grantedVotes: NIOAtomic<UInt> = NIOAtomic.makeAtomic(value: 1) // We already votes for ourself
@@ -281,7 +306,10 @@ extension ConsensusService {
             ])
 
             return EventLoopFuture.andAllComplete(self.peers.map { peer -> EventLoopFuture<Bool> in
-                peer.requestVote(isPreVote: isPreVote, term: termId).always { result in
+                peer.requestVote(isPreVote: isPreVote,
+                                 term: termId,
+                                 lastLogIndex: lastLogIndex,
+                                 lastLogTerm: lastLogTerm).always { result in
                     // Check is response is true and we still in the same term when started
                     if case let .success(accepted) = result,
                        accepted,
@@ -294,11 +322,11 @@ extension ConsensusService {
                 }
             }, on: self.group.next())
         }
-        allReqeusts.whenSuccess {
+        allRequests.whenSuccess {
             // Send false on finish if we don't have enough votes
             resultPromise.succeed(false)
         }
-        allReqeusts.cascadeFailure(to: resultPromise)
+        allRequests.cascadeFailure(to: resultPromise)
         return resultPromise.futureResult
     }
 }

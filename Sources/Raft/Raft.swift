@@ -4,6 +4,7 @@
 import GRPC
 import NIO
 import Logging
+import Foundation
 
 /// Raft node public interface
 final public class Raft {
@@ -12,9 +13,9 @@ final public class Raft {
     private var peers: [PeerConfiguration]
     private let group: EventLoopGroup
     private var server: Server?
-    private var consensus: ConsensusService!
+    private var consensus: ConsensusService<MemoryLog<String>>!
 
-    private var log: Logger {
+    private var logger: Logger {
         self.config.logger
     }
 
@@ -29,14 +30,15 @@ final public class Raft {
             try config.validate()
         } catch {
             // TODO better error handling
-            log.error("Configuration error \(error)")
+            logger.error("Configuration error \(error)")
             return
         }
         self.consensus = ConsensusService(
             group: group,
             config: config,
             peers: peers.map({ Peer(myself: config.server.id, config: $0, rpcConfig: config.rpc, group: group) }),
-            log: log)
+            log: MemoryLog(),
+            logger: logger)
 
         let server = Server.insecure(group: group)
             .withServiceProviders([consensus])
@@ -47,15 +49,27 @@ final public class Raft {
             return server.channel.localAddress
         }
         load.whenFailure { error in
-            self.log.error("\(error)")
+            self.logger.error("\(error)")
         }
         load.whenSuccess { address in
-            self.log.debug("Server started on port \(address!.port!)")
+            self.logger.debug("Server started on port \(address!.port!)")
             self.consensus.onStart()
         }
     }
 
     public func shutdown() -> EventLoopFuture<Void>? {
         server?.initiateGracefulShutdown()
+    }
+}
+
+// Use string as dummy application data
+extension String: LogData {
+
+    init?(data: Data) {
+        self.init(data: data, encoding: .utf8)
+    }
+
+    var size: Int {
+        self.data(using: .utf8)?.count ?? 0
     }
 }

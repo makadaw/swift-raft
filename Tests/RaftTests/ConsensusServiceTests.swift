@@ -15,19 +15,21 @@ final class ConsensusServiceTests: XCTestCase {
     func testDefaults() {
 
         let config = Configuration(id: 1)
-        let service = ConsensusService(group: group,
-                                       config: config,
-                                       peers: [],
-                                       log: log)
+        let service = ConsensusService<MemoryLog<String>>(group: group,
+                                               config: config,
+                                               peers: [],
+                                               log: MemoryLog(),
+                                               logger: log)
         XCTAssertEqual(service.term.id, 0)
         XCTAssertEqual(service.state, .follower)
     }
 
     func testStateMove() {
-        let service = ConsensusService(group: group,
+        let service = ConsensusService<MemoryLog<String>>(group: group,
                                        config: Configuration(id: 1),
                                        peers: [],
-                                       log: log)
+                                       log: MemoryLog(),
+                                       logger: log)
         let exp = expectation(description: "Vote response")
         service.requestVote(request: Raft_RequestVote.Request.with({
             $0.candidateID = 2
