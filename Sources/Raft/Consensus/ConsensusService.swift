@@ -29,9 +29,31 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
     /// List of active peers for the current node
     private var peers: [Peer]
 
-    /// Node current state, should not be changed directly, only via `tryBecome...` methods. Node start as a follower
+    /// Node current state, should not be changed directly, only via `_tryMoveTo(nextState:)` method. Node start as a follower
     /// Lock value
-    private(set) var state: State = .follower
+    private(set) var state: State = .follower {
+        didSet {
+            switch state {
+                case .follower:
+                    heartbeatTask?.cancel()
+                    resetElectionTimer()
+
+                case .preCandidate:
+                    electionTimer?.cancel()
+                    heartbeatTask?.cancel()
+                    startPreVote()
+
+                case .candidate:
+                    electionTimer?.cancel()
+                    heartbeatTask?.cancel()
+                    startVote()
+
+                case .leader:
+                    electionTimer?.cancel()
+                    resetHeartbeatTimer()
+            }
+        }
+    }
 
     /// Latest term server has seen, increases monotonically
     /// Lock value
@@ -83,46 +105,6 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
             }
             return false
         }
-    }
-
-    func tryBecomePreCandidate() -> Bool {
-        if !_tryMoveTo(nextState: .preCandidate) {
-            return false
-        }
-        electionTimer?.cancel()
-        heartbeatTask?.cancel()
-        startPreVote()
-        return true
-    }
-
-    func tryBecomeCandidate() -> Bool {
-        if !_tryMoveTo(nextState: .candidate) {
-            return false
-        }
-        // Stop an election timer and start vote
-        electionTimer?.cancel()
-        heartbeatTask?.cancel()
-        startVote()
-        return true
-    }
-
-    func tryBecomeFollower() -> Bool {
-        if !_tryMoveTo(nextState: .follower) {
-            return false
-        }
-        heartbeatTask?.cancel()
-        resetElectionTimer()
-        return true
-    }
-
-    func tryBecomeLeader() -> Bool {
-        if !_tryMoveTo(nextState: .leader) {
-            return false
-        }
-        // Stop election timer and schedule heartbeat
-        electionTimer?.cancel()
-        resetHeartbeatTimer()
-        return true
     }
 
 }
@@ -195,7 +177,7 @@ extension ConsensusService: Raft_RaftProvider {
         }
         if shouldStepDown {
             // Next method have own lock, should be called not from lock
-            if !tryBecomeFollower() {
+            if !_tryMoveTo(nextState: .follower) {
                 logger.debug("Got term greate than current and failed to move to the follower")
             }
             let response = Raft_AppendEntries.Response.with {
@@ -208,7 +190,7 @@ extension ConsensusService: Raft_RaftProvider {
         let response = Raft_AppendEntries.Response.with {
             $0.term = term.id
             // TODO check logs ids
-            $0.success = tryBecomeFollower()
+            $0.success = _tryMoveTo(nextState: .follower)
         }
 
         logger.debug("Receive message", metadata: [
@@ -246,7 +228,7 @@ extension ConsensusService {
             return
         }
         logger.debug("Node \(myself) would start an election campaign")
-        if !tryBecomePreCandidate() {
+        if !_tryMoveTo(nextState: .preCandidate) {
             // Failed to switch state, just reset an election timer and wait for a next round
             resetElectionTimer()
         }
@@ -258,7 +240,7 @@ extension ConsensusService {
         vote.whenSuccess { result in
             if result {
                 // TODO Error log
-                _ = self.tryBecomeCandidate()
+                _ = self._tryMoveTo(nextState: .candidate)
             } else {
                 self.resetElectionTimer()
             }
@@ -277,7 +259,7 @@ extension ConsensusService {
                 "vote/result": "\(result)",
                 "vote/term": "\(self.term)"
             ])
-            if !(result && self.tryBecomeLeader()) { // Won an election
+            if !(result && self._tryMoveTo(nextState: .leader)) { // Won an election
                 self.logger.debug("Failed to become a leader for \(self.term) term")
             }
         }
