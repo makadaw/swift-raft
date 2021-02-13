@@ -17,6 +17,7 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
     }
 
     private let group: EventLoopGroup
+    private let eventLoop: EventLoop
     private let config: Configuration
     private let logger: Logger
     var interceptors: Raft_RaftServerInterceptorFactoryProtocol?
@@ -74,6 +75,7 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
 
     init(group: EventLoopGroup, config: Configuration, peers: [Peer], log: ApplicationLog, logger: Logger) {
         self.group = group
+        self.eventLoop = group.next()
         self.config = config
         self.peers = peers
         self.logger = logger
@@ -219,7 +221,7 @@ extension ConsensusService {
         // randomise election timer
         let timeout = config.electionTimeout
             + .nanoseconds(Int64.random(in: 1000...config.electionTimeout.nanoseconds))
-        electionTimer = group.next().scheduleTask(in: timeout, electionTimeout)
+        electionTimer = eventLoop.scheduleTask(in: timeout, electionTimeout)
     }
 
     /// Election timeout fired, if node is not a leader start a campaign
@@ -270,8 +272,8 @@ extension ConsensusService {
     }
 
     private func startVote(isPreVote: Bool) -> EventLoopFuture<Bool> {
-        let resultPromise = group.next().makePromise(of: Bool.self)
-        let allRequests = group.next().flatSubmit { () -> EventLoopFuture<Void> in
+        let resultPromise = eventLoop.makePromise(of: Bool.self)
+        let allRequests = eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
             let (termId, lastLogIndex, lastLogTerm) = self.lock.withLock { () -> (Term.Id, UInt, Term.Id) in
                 let next = self.term.nextTerm()
                 if !isPreVote {
@@ -302,7 +304,7 @@ extension ConsensusService {
                         }
                     }
                 }
-            }, on: self.group.next())
+            }, on: self.eventLoop)
         }
         allRequests.whenSuccess {
             // Send false on finish if we don't have enough votes
@@ -325,9 +327,9 @@ extension ConsensusService {
         if let heartbeatTask = heartbeatTask {
             heartbeatTask.cancel()
         }
-        heartbeatTask = group.next().scheduleRepeatedAsyncTask(initialDelay: TimeAmount.zero,
-                                                               delay: heartbeatTimeout(),
-                                                               heartbeat)
+        heartbeatTask = eventLoop.scheduleRepeatedAsyncTask(initialDelay: TimeAmount.zero,
+                                                            delay: heartbeatTimeout(),
+                                                            heartbeat)
     }
 
     func heartbeatTimeout() -> TimeAmount {
@@ -338,12 +340,12 @@ extension ConsensusService {
         guard case .leader = state else {
             logger.error("Not a leader tried to send a heartbeat message")
             heartbeatTask?.cancel()
-            return group.next().makeFailedFuture(AppendLogError.notALeaderTryToHeartbeat)
+            return eventLoop.makeFailedFuture(AppendLogError.notALeaderTryToHeartbeat)
         }
         // Send heartbeat to all peers
         return EventLoopFuture.andAllComplete(peers.map({ peer -> EventLoopFuture<Bool> in
             return peer.sendHeartbeat(term: self.term)
-        }), on: group.next())
+        }), on: eventLoop)
     }
 
 }
