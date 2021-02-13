@@ -9,21 +9,14 @@ enum LogError: Error {
     case outOfRange
 }
 
-struct LogMetadata {
-    var termId: Term.Id?
-    var voteFor: NodeId?
-
-    mutating func updateTerm(_ term: Term) {
-        termId = term.id
-        voteFor = term.votedFor
-    }
-}
-
-/// Represent a Raft log. Maybe should be a Collection
+/// Represent a Raft log
 protocol Log: Sequence where Element == LogElement<Data> {
     associatedtype Data: LogData
 
+    /// First index in the log, it could be not 0 as log can be trimmed
     var logStartIndex: UInt { get }
+
+    /// Last index, should be higher than start index
     var logLastIndex: UInt { get }
 
     /// Return size of all elements data in bytes. Without additional data (term id, index, etc)
@@ -41,10 +34,13 @@ protocol Log: Sequence where Element == LogElement<Data> {
     /// - Parameter entries: range of indexes of the new entries in the log, closed
     mutating func append(_ entries: [LogElement<Data>]) -> ClosedRange<UInt>
 
+    /// Truncate entities before index
     mutating func truncatePrefix(_ firstIndex: UInt)
+
+    /// Truncate entities after index
     mutating func truncateSuffix(_ lastIndex: UInt)
 
-    /// Log also used to store current term of the node. Node will read it on start to restore term
+    /// Associated data with the current log
     var metadata: LogMetadata { get set }
 }
 
@@ -53,23 +49,5 @@ extension Log {
         UInt(reduce(0) { acc, element in
             acc + element.sizeBytes
         })
-    }
-}
-
-extension LogMetadata {
-    func toMessage() -> Raft_LogMetadata {
-        Raft_LogMetadata.with {
-            if let termId = self.termId {
-                $0.term = termId
-            }
-            if let voteFor = self.voteFor {
-                $0.voteFor = voteFor
-            }
-        }
-    }
-
-    static func from(message: Raft_LogMetadata) -> LogMetadata {
-        LogMetadata(termId: message.hasTerm ? message.term : nil,
-                    voteFor: message.hasVoteFor ? message.voteFor : nil)
     }
 }
