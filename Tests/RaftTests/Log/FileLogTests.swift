@@ -10,14 +10,13 @@ final class FileLogTests: XCTestCase {
     var location: Path!
 
     override func setUpWithError() throws {
-        var tempDirectoryPath = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        tempDirectoryPath.appendPathComponent("FileLog-Tests")
-        if FileManager.default.fileExists(atPath: tempDirectoryPath.absoluteString) {
-            try FileManager.default.removeItem(at: tempDirectoryPath)
+        let tempDirectory = Path.defaultTemporaryDirectory("FileLog-Tests")
+        if FileManager.default.fileExists(atPath: tempDirectory.absolutePath) {
+            try FileManager.default.removeItem(at: tempDirectory.toURL)
         }
-        try FileManager.default.createDirectory(at: tempDirectoryPath,
+        try FileManager.default.createDirectory(at: tempDirectory.toURL,
                                             withIntermediateDirectories: true)
-        location = try Path(tempDirectoryPath.path)
+        location = tempDirectory
     }
 
     override func tearDownWithError() throws {

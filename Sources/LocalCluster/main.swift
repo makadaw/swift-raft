@@ -27,6 +27,8 @@ struct Start: ParsableCommand {
             preconditionFailure("Peers should be provided or num is set, but not both")
         }
 
+        let tempDirectory = Path.defaultTemporaryDirectory()
+
         let lifecycle = ServiceLifecycle()
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         lifecycle.register(label: "local.group",
@@ -41,6 +43,7 @@ struct Start: ParsableCommand {
                 var config = Configuration(id: node.id, port: node.port)
                 config.logger.logLevel = .debug
                 config.electionTimeout = .milliseconds(1000)
+                config.logRoot = try! tempDirectory.appending("node-\(node.id)")
                 let raftNode = Raft(config: config,
                                     peers: peers.filter({ $0.id != node.id }),
                                     group: group)

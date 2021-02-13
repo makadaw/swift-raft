@@ -13,7 +13,7 @@ final public class Raft {
     private var peers: [PeerConfiguration]
     private let group: EventLoopGroup
     private var server: Server?
-    private var consensus: ConsensusService<MemoryLog<String>>!
+    private var consensus: ConsensusService<FileLog<String>>!
 
     private var logger: Logger {
         self.config.logger
@@ -37,7 +37,7 @@ final public class Raft {
             group: group,
             config: config,
             peers: peers.map({ Peer(myself: config.server.id, config: $0, rpcConfig: config.rpc, group: group) }),
-            log: MemoryLog(),
+            log: FileLog<String>(root: config.logRoot),
             logger: logger)
 
         let server = Server.insecure(group: group)

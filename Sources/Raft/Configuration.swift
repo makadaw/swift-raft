@@ -37,6 +37,8 @@ public struct Configuration {
     /// A leader sends RPCs at least this often, even if there is no data to send
     public var heartbeatPeriod: TimeAmount = .milliseconds(500)
 
+    public var logRoot: Path!
+
     /// RPC call related configuration
     public var rpc: RPCConfiguration = .init()
 
@@ -66,11 +68,15 @@ extension Configuration {
 
     enum Error: Swift.Error {
         case heartbeatTimeShouldBeLessThanElection
+        case logConfigurationIsEmpty
     }
 
     /// Validate configuration
     /// - Throws: configuration error
     func validate() throws {
+        if logRoot == nil {
+            throw Error.logConfigurationIsEmpty
+        }
         if heartbeatPeriod > electionTimeout {
             throw Error.heartbeatTimeShouldBeLessThanElection
         }
