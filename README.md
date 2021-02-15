@@ -26,3 +26,7 @@ Swift implementation of the [Raft protocol](https://raft.github.io/raft.pdf),
 ### Log compaction
 
 - [ ] Memory based snapshots
+
+## Development
+- [ ] Add Linux tests
+- [ ] Setup CI

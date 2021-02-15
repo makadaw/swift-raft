@@ -3,6 +3,7 @@
 
 
 import Foundation
+import Raft
 
 /// Protocol constraints for Data that we can store in the Log entry. This protocol should be implemented
 /// by consumer and represent application data, not Raft types

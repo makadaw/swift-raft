@@ -2,8 +2,7 @@
 // Copyright © 2021 makadaw
 
 import XCTest
-import Raft
-@testable import RaftNIO
+@testable import Raft
 
 final class TermTests: XCTestCase {
     let mySelf: NodeId = 1
@@ -37,9 +36,4 @@ final class TermTests: XCTestCase {
                              "Should throw an error if try to set lowwer term")
     }
 
-    static var allTests = [
-        ("testNext", testNext),
-        ("testVoteAccept", testVoteAccept),
-        ("testBumpCurrentTerm", testBumpCurrentTerm),
-    ]
 }

@@ -52,6 +52,11 @@ let package = Package(
             ],
             exclude: ["Proto/raft.proto"]),
         .testTarget(
+            name: "RaftTests",
+            dependencies: [
+                "Raft"
+            ]),
+        .testTarget(
             name: "RaftNIOTests",
             dependencies: [
                 "RaftNIO"
