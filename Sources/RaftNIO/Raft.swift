@@ -31,7 +31,7 @@ final public class RaftNIO {
             group: group,
             config: config,
             peers: peers.map({ Peer(myself: config.myself.id, config: $0, rpcConfig: config.rpc, group: group) }),
-            log: FileLog<String>(root: try! Path(config.log.root)),
+            log: FileLog<String>(root: config.log.root),
             logger: logger)
 
         let server = Server.insecure(group: group)

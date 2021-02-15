@@ -96,8 +96,8 @@
         "repositoryURL": "https://github.com/apple/swift-protobuf.git",
         "state": {
           "branch": null,
-          "revision": "da9a52be9cd36c63993291ce3f1b65dafcd1e826",
-          "version": "1.14.0"
+          "revision": "e1904bf5a5f79cb7e0ff68a427a53a93b652fcd1",
+          "version": "1.15.0"
         }
       },
       {
@@ -107,6 +107,15 @@
           "branch": null,
           "revision": "a7356e142b083938c63e559b78e35f7f82627a79",
           "version": "1.0.0-alpha.6"
+        }
+      },
+      {
+        "package": "swift-system",
+        "repositoryURL": "https://github.com/apple/swift-system",
+        "state": {
+          "branch": null,
+          "revision": "920ef3085d4c0a3abad12bdaa265e0670db98fc0",
+          "version": null
         }
       }
     ]

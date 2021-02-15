@@ -15,6 +15,10 @@ let package = Package(
             targets: ["local-cluster"]),
     ],
     dependencies: [
+        // Use version from main, wait for next release.
+        // We need next commit `2167575e66d7db8839524a3c6fe9f12ec58528f9` but currently it failed to compile
+        // on the last toolchaine. Wait until error resolved https://github.com/apple/swift-system/issues/23
+        .package(url: "https://github.com/apple/swift-system", .revision("920ef3085d4c0a3abad12bdaa265e0670db98fc0")),
         .package(url: "https://github.com/apple/swift-log", from: "1.4.0"),
         .package(url: "https://github.com/grpc/grpc-swift", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "1.0.0-alpha.6"),
@@ -32,12 +36,17 @@ let package = Package(
         .target(
             name: "Raft",
             dependencies: [
+                .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Logging", package: "swift-log"),
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
             ]),
         .target(
             name: "RaftNIO",
             dependencies: [
                 "Raft",
+                .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
             ],

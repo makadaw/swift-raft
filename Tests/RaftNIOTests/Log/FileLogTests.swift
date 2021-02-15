@@ -3,15 +3,16 @@
 
 import XCTest
 import Foundation
+import SystemPackage
 @testable import RaftNIO
 
 
 final class FileLogTests: XCTestCase {
-    var location: Path!
+    var location: FilePath!
 
     override func setUpWithError() throws {
-        let tempDirectory = Path.defaultTemporaryDirectory("FileLog-Tests")
-        if FileManager.default.fileExists(atPath: tempDirectory.absolutePath) {
+        let tempDirectory = FilePath.defaultTemporaryDirectory("FileLog-Tests")
+        if FileManager.default.fileExists(atPath: tempDirectory.path) {
             try FileManager.default.removeItem(at: tempDirectory.toURL)
         }
         try FileManager.default.createDirectory(at: tempDirectory.toURL,
@@ -21,15 +22,13 @@ final class FileLogTests: XCTestCase {
 
     override func tearDownWithError() throws {
         if let location = self.location {
-            try FileManager.default.removeItem(atPath: location.absolutePath)
+            try FileManager.default.removeItem(atPath: location.path)
         }
 
     }
 
     func testMetadataSave() throws {
-        guard let metadataPath = try? location.appending("metadata") else {
-            fatalError("Metadata filename or root path not really paths")
-        }
+        let metadataPath = location.appending("metadata")
         var meta = FileLog<String>.loadMetadata(from: metadataPath)
         XCTAssertNil(meta.termId)
         meta.termId = 42

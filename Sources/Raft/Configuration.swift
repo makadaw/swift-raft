@@ -3,6 +3,7 @@
 
 
 import enum Dispatch.DispatchTimeInterval
+import SystemPackage
 import Logging
 
 public typealias NodeId = UInt64
@@ -78,7 +79,7 @@ public extension Configuration {
     struct Log {
 
         /// Root folder for a log instance
-        public var root: String
+        public var root: FilePath
     }
 
     struct RPC {

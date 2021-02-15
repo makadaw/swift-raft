@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
+
+import SystemPackage
 import NIO
 import SwiftProtobuf
 import Foundation
-
 
 // File log, simple implementation for prototype
 // TODO:
@@ -15,8 +16,8 @@ struct FileLog<T: LogData>: Log {
     typealias Iterator = MemoryLog<Data>.Iterator
 
     // MARK: Files
-    private let root: Path
-    private let metadataPath: Path
+    private let root: FilePath
+    private let metadataPath: FilePath
     private var memoryLog: MemoryLog<Data>
     var metadata: LogMetadata {
         didSet {
@@ -28,16 +29,13 @@ struct FileLog<T: LogData>: Log {
         }
     }
 
-    init(root: Path, metadataFileName: String = "metadata") {
-        guard let metadataPath = try? root.appending(metadataFileName) else {
-            fatalError("Metadata filename or root path not really paths")
-        }
+    init(root: FilePath, metadataFileName: String = "metadata") {
         self.root = root
-        if !FileManager.default.fileExists(atPath: root.absolutePath) {
-            try! FileManager.default.createDirectory(atPath: root.absolutePath, withIntermediateDirectories: true)
+        if !FileManager.default.fileExists(atPath: root.path) {
+            try! FileManager.default.createDirectory(atPath: root.path, withIntermediateDirectories: true)
         }
 
-        self.metadataPath = metadataPath
+        self.metadataPath = root.appending(metadataFileName)
 
         // Load metadata file
         metadata = Self.loadMetadata(from: metadataPath)
@@ -85,8 +83,8 @@ struct FileLog<T: LogData>: Log {
 // TODO: Do not use FileManager directly
 extension FileLog {
 
-    static func loadMetadata(from: Path) -> LogMetadata {
-        if FileManager.default.fileExists(atPath: from.absolutePath),
+    static func loadMetadata(from: FilePath) -> LogMetadata {
+        if FileManager.default.fileExists(atPath: from.path),
            let data = try? Foundation.Data(contentsOf: from.toURL),
            let metadata = try? Raft_LogMetadata(serializedData: data) {
             return LogMetadata.from(message: metadata)
@@ -96,7 +94,7 @@ extension FileLog {
     }
 
     // TODO should be async
-    static func saveMetadata(_ metadata: LogMetadata, to: Path) throws {
+    static func saveMetadata(_ metadata: LogMetadata, to: FilePath) throws {
         let data = try metadata.toMessage().serializedData()
         try data.write(to: to.toURL, options: .atomic)
     }

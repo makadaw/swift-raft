@@ -7,6 +7,7 @@ import Raft
 import NIO
 import Lifecycle
 import Logging
+import SystemPackage
 import ArgumentParser
 import enum Dispatch.DispatchTimeInterval
 
@@ -30,7 +31,7 @@ struct Start: ParsableCommand {
             preconditionFailure("Peers should be provided or num is set, but not both")
         }
 
-        let tempDirectory = Path.defaultTemporaryDirectory()
+        let tempDirectory = FilePath.defaultTemporaryDirectory()
 
         let lifecycle = ServiceLifecycle()
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
@@ -46,7 +47,7 @@ struct Start: ParsableCommand {
                 var config = Configuration(id: node.id, port: node.port)
                 config.logger.logLevel = .debug
                 config.protocol.electionTimeout = .milliseconds(1000)
-                config.log.root = try! tempDirectory.appending("node-\(node.id)").absolutePath
+                config.log.root = tempDirectory.appending("node-\(node.id)")
                 let raftNode = RaftNIO(config: config,
                                        peers: peers.filter({ $0.id != node.id }),
                                        group: group)
