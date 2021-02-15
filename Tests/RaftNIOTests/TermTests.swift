@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 import XCTest
-@testable import Raft
+@testable import RaftNIO
 
 final class TermTests: XCTestCase {
     let mySelf: NodeId = 1

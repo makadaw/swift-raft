@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
-import Raft
+import RaftNIO
 import NIO
 import Lifecycle
 import Logging

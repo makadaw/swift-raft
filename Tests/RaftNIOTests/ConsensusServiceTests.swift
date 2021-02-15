@@ -6,7 +6,7 @@ import NIO
 import NIOHPACK
 import Logging
 import GRPC
-@testable import Raft
+@testable import RaftNIO
 
 final class ConsensusServiceTests: XCTestCase {
     let group = EmbeddedEventLoop()

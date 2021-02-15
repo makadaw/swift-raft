@@ -3,7 +3,7 @@
 
 import XCTest
 import Foundation
-@testable import Raft
+@testable import RaftNIO
 
 
 final class FileLogTests: XCTestCase {

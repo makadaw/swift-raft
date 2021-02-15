@@ -8,8 +8,8 @@ let package = Package(
     platforms: [.macOS("10.12")],
     products: [
         .library(
-            name: "Raft",
-            targets: ["Raft"]),
+            name: "RaftNIO",
+            targets: ["RaftNIO"]),
         .executable(
             name: "LocalCluster",
             targets: ["LocalCluster"]),
@@ -24,22 +24,22 @@ let package = Package(
         .target(
             name: "LocalCluster",
             dependencies: [
-                "Raft",
+                "RaftNIO",
                 .product(name: "Lifecycle", package: "swift-service-lifecycle"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             exclude: ["Proto/example.proto", "Proto/log.proto"]),
         .target(
-            name: "Raft",
+            name: "RaftNIO",
             dependencies: [
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
             ],
             exclude: ["Proto/raft.proto"]),
         .testTarget(
-            name: "RaftTests",
+            name: "RaftNIOTests",
             dependencies: [
-                "Raft"
+                "RaftNIO"
             ]),
     ]
 )

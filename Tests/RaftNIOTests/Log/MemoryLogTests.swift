@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 import XCTest
-@testable import Raft
+@testable import RaftNIO
 
 // Use LogCabin test case to validate memory log
 final class MemoryLogTests: XCTestCase {
