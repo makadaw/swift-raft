@@ -2,6 +2,8 @@
 // Copyright © 2021 makadaw
 
 
+import Raft
+
 struct LogMetadata {
     var termId: Term.Id?
     var voteFor: NodeId?

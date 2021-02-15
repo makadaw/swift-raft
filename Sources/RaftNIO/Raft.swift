@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
+import Raft
 import GRPC
 import NIO
 import Logging
@@ -10,7 +11,7 @@ import Foundation
 final public class RaftNIO {
 
     private let config: Configuration
-    private var peers: [PeerConfiguration]
+    private var peers: [Configuration.Peer]
     private let group: EventLoopGroup
     private var server: Server?
     private var consensus: ConsensusService<FileLog<String>>!
@@ -19,30 +20,23 @@ final public class RaftNIO {
         self.config.logger
     }
 
-    public init(config: Configuration, peers: [PeerConfiguration], group: EventLoopGroup) {
+    public init(config: Configuration, peers: [Configuration.Peer], group: EventLoopGroup) {
         self.config = config
         self.peers = peers
         self.group = group
     }
 
     public func start() {
-        do {
-            try config.validate()
-        } catch {
-            // TODO better error handling
-            logger.error("Configuration error \(error)")
-            return
-        }
         self.consensus = ConsensusService(
             group: group,
             config: config,
-            peers: peers.map({ Peer(myself: config.server.id, config: $0, rpcConfig: config.rpc, group: group) }),
-            log: FileLog<String>(root: config.logRoot),
+            peers: peers.map({ Peer(myself: config.myself.id, config: $0, rpcConfig: config.rpc, group: group) }),
+            log: FileLog<String>(root: try! Path(config.log.root)),
             logger: logger)
 
         let server = Server.insecure(group: group)
             .withServiceProviders([consensus])
-            .bind(host: config.server.host, port: config.server.port)
+            .bind(host: config.myself.host, port: config.myself.port)
 
         let load = server.map { (server: Server) -> SocketAddress? in
             self.server = server

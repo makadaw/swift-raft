@@ -30,8 +30,14 @@ let package = Package(
             ],
             exclude: ["Proto/example.proto", "Proto/log.proto"]),
         .target(
+            name: "Raft",
+            dependencies: [
+                .product(name: "Logging", package: "swift-log"),
+            ]),
+        .target(
             name: "RaftNIO",
             dependencies: [
+                "Raft",
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
             ],

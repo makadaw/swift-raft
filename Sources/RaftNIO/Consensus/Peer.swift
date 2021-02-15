@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
+
+import Raft
 import GRPC
 import NIO
 
@@ -10,15 +12,15 @@ class Peer {
     let myself: NodeId
 
     /// Remote peer configuration, uniq for peer
-    let config: PeerConfiguration
+    let config: Configuration.Peer
 
     /// RPC related configuration, the same for all peers
-    let rpcConfig: RPCConfiguration
+    let rpcConfig: Configuration.RPC
 
     private let client: Raft_RaftClientProtocol
     private let group: EventLoopGroup
 
-    init(myself: NodeId, config: PeerConfiguration, rpcConfig: RPCConfiguration, group: EventLoopGroup) {
+    init(myself: NodeId, config: Configuration.Peer, rpcConfig: Configuration.RPC, group: EventLoopGroup) {
         self.myself = myself
         self.config = config
         self.rpcConfig = rpcConfig
@@ -46,7 +48,7 @@ class Peer {
 
         let response = client.requestVote(
             request,
-            callOptions: CallOptions(timeLimit: .timeout(rpcConfig.voteTimeout)))
+            callOptions: CallOptions(timeLimit: .timeout(.nanoseconds(rpcConfig.voteTimeout.nanoseconds))))
         response.response.whenSuccess { message in
             promise.succeed(message.voteGranted)
         }
@@ -68,7 +70,7 @@ class Peer {
 
         let response = client.appendEntries(
             request,
-            callOptions: CallOptions(timeLimit: .timeout(rpcConfig.appendMessageTimeout)))
+            callOptions: CallOptions(timeLimit: .timeout(.nanoseconds(rpcConfig.appendMessageTimeout.nanoseconds))))
         response.response.whenSuccess { message in
             // TODO do a check here
             promise.succeed(true)

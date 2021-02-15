@@ -2,6 +2,7 @@
 // Copyright © 2021 makadaw
 
 import XCTest
+import Raft
 @testable import RaftNIO
 
 final class TermTests: XCTestCase {

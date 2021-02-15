@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
+import Raft
 import GRPC
 import NIO
 import NIOConcurrencyHelpers
@@ -24,7 +25,7 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
 
     /// Current node id
     var myself: NodeId {
-        config.server.id
+        config.myself.id
     }
 
     /// List of active peers for the current node
@@ -91,7 +92,7 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
             print("Configuration \(entity)")
         }
         self.logger.debug("The log contains indexes \(log.logStartIndex) through \(log.logLastIndex)")
-        self.term = Term(myself: config.server.id, id: log.metadata.termId ?? 0)
+        self.term = Term(myself: config.myself.id, id: log.metadata.termId ?? 0)
     }
 
     func onStart() {
@@ -219,8 +220,8 @@ extension ConsensusService {
             electionTimer.cancel()
         }
         // randomise election timer
-        let timeout = config.electionTimeout
-            + .nanoseconds(Int64.random(in: 1000...config.electionTimeout.nanoseconds))
+        let timeout: TimeAmount = .nanoseconds(config.protocol.electionTimeout.nanoseconds
+            + Int64.random(in: 1000...config.protocol.electionTimeout.nanoseconds))
         electionTimer = eventLoop.scheduleTask(in: timeout, electionTimeout)
     }
 
@@ -333,7 +334,7 @@ extension ConsensusService {
     }
 
     func heartbeatTimeout() -> TimeAmount {
-        return config.heartbeatPeriod
+        return .nanoseconds(config.protocol.heartbeatPeriod.nanoseconds)
     }
 
     func heartbeat(task: RepeatedTask) -> EventLoopFuture<Void> {

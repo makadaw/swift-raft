@@ -18,7 +18,7 @@ public struct Path: Hashable {
         _path.starts(with: "/")
     }
 
-    var absolutePath: String {
+    public var absolutePath: String {
         _path
     }
 

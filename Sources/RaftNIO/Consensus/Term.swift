@@ -2,6 +2,8 @@
 // Copyright © 2021 makadaw
 
 
+import Raft
+
 /// Node term description. Collect togeather a term id and vote of the current term
 struct Term {
     typealias Id = UInt64

@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
+
 import RaftNIO
+import Raft
 import NIO
 import Lifecycle
 import Logging
 import ArgumentParser
+import enum Dispatch.DispatchTimeInterval
 
 struct Start: ParsableCommand {
     @Argument(help: "list of peers in format `<id>:<host>:<port>`")
@@ -18,7 +21,7 @@ struct Start: ParsableCommand {
     var runNode: NodeId?
 
     mutating func run() throws {
-        let peers: [PeerConfiguration]
+        let peers: [Configuration.Peer]
         if self.peers.isEmpty && num > 0 {
             peers = testNodes(num)
         } else if !self.peers.isEmpty && num == 0 {
@@ -42,8 +45,8 @@ struct Start: ParsableCommand {
             .forEach { node in
                 var config = Configuration(id: node.id, port: node.port)
                 config.logger.logLevel = .debug
-                config.electionTimeout = .milliseconds(1000)
-                config.logRoot = try! tempDirectory.appending("node-\(node.id)")
+                config.protocol.electionTimeout = .milliseconds(1000)
+                config.log.root = try! tempDirectory.appending("node-\(node.id)").absolutePath
                 let raftNode = RaftNIO(config: config,
                                        peers: peers.filter({ $0.id != node.id }),
                                        group: group)
@@ -59,19 +62,19 @@ struct Start: ParsableCommand {
         try lifecycle.startAndWait()
     }
 
-    func parsePeers(_ pattern: [String]) -> [PeerConfiguration] {
+    func parsePeers(_ pattern: [String]) -> [Configuration.Peer] {
         pattern.compactMap { peer in
             let idHostPort = peer.split(separator: ":").map(String.init)
             guard idHostPort.count == 3, let id = NodeId(idHostPort[0]), let port = Int(idHostPort[2]) else {
                 return nil
             }
-            return PeerConfiguration(id: id, host: idHostPort[1], port: port)
+            return Configuration.Peer(id: id, host: idHostPort[1], port: port)
         }
     }
 
-    func testNodes(_ to: Int) -> [PeerConfiguration] {
+    func testNodes(_ to: Int) -> [Configuration.Peer] {
         (1...to)
-            .map { PeerConfiguration(id: NodeId($0), host: "localhost", port: 8890 + $0) }
+            .map { Configuration.Peer(id: NodeId($0), host: "localhost", port: 8890 + $0) }
     }
 }
 
