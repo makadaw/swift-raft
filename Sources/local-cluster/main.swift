@@ -44,9 +44,9 @@ struct Start: ParsableCommand {
                 config.logger.logLevel = .debug
                 config.electionTimeout = .milliseconds(1000)
                 config.logRoot = try! tempDirectory.appending("node-\(node.id)")
-                let raftNode = Raft(config: config,
-                                    peers: peers.filter({ $0.id != node.id }),
-                                    group: group)
+                let raftNode = RaftNIO(config: config,
+                                       peers: peers.filter({ $0.id != node.id }),
+                                       group: group)
 
                 lifecycle.register(
                     label: "raft-\(node.id)",

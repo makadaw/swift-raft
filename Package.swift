@@ -11,8 +11,8 @@ let package = Package(
             name: "RaftNIO",
             targets: ["RaftNIO"]),
         .executable(
-            name: "LocalCluster",
-            targets: ["LocalCluster"]),
+            name: "local-cluster",
+            targets: ["local-cluster"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log", from: "1.4.0"),
@@ -22,7 +22,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "LocalCluster",
+            name: "local-cluster",
             dependencies: [
                 "RaftNIO",
                 .product(name: "Lifecycle", package: "swift-service-lifecycle"),

@@ -7,7 +7,7 @@ import Logging
 import Foundation
 
 /// Raft node public interface
-final public class Raft {
+final public class RaftNIO {
 
     private let config: Configuration
     private var peers: [PeerConfiguration]
