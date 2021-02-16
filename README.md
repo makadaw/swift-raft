@@ -30,3 +30,7 @@ Swift implementation of the [Raft protocol](https://raft.github.io/raft.pdf),
 ## Development
 - [ ] Add Linux tests
 - [ ] Setup CI
+
+## Contribution
+
+To compile the project you need to use [snapshot](https://swift.org/download/#snapshots) toolchain with Actors support.
