@@ -6,7 +6,7 @@ import struct Dispatch.DispatchTime
 import enum Dispatch.DispatchTimeInterval
 import Logging
 
-actor public class Consensus {
+public actor Consensus {
     let config: Configuration
     var logger: Logger {
         config.logger
