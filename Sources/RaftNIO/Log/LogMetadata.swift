@@ -5,8 +5,8 @@
 import Raft
 
 struct LogMetadata {
-    var termId: Term.Id?
-    var voteFor: NodeId?
+    var termId: Term.ID?
+    var voteFor: NodeID?
 
     mutating func updateTerm(_ term: Term) {
         termId = term.id

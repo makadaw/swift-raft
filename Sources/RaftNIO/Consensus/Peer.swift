@@ -9,7 +9,7 @@ import NIO
 /// Peer interface
 class Peer {
     /// Current node id
-    let myself: NodeId
+    let myself: NodeID
 
     /// Remote peer configuration, uniq for peer
     let config: Configuration.Peer
@@ -20,7 +20,7 @@ class Peer {
     private let client: Raft_RaftClientProtocol
     private let group: EventLoopGroup
 
-    init(myself: NodeId, config: Configuration.Peer, rpcConfig: Configuration.RPC, group: EventLoopGroup) {
+    init(myself: NodeID, config: Configuration.Peer, rpcConfig: Configuration.RPC, group: EventLoopGroup) {
         self.myself = myself
         self.config = config
         self.rpcConfig = rpcConfig
@@ -33,9 +33,9 @@ class Peer {
     }
 
     func requestVote(isPreVote: Bool = false,
-                     term: Term.Id,
+                     term: Term.ID,
                      lastLogIndex: UInt,
-                     lastLogTerm: Term.Id) -> EventLoopFuture<Bool> {
+                     lastLogTerm: Term.ID) -> EventLoopFuture<Bool> {
         let request = Raft_RequestVote.Request.with {
             $0.type = isPreVote ? .preVote : .vote
             $0.candidateID = myself

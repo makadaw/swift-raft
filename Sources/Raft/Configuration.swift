@@ -6,7 +6,7 @@ import enum Dispatch.DispatchTimeInterval
 import SystemPackage
 import Logging
 
-public typealias NodeId = UInt64
+public typealias NodeID = UInt64
 
 public struct Configuration {
 
@@ -25,7 +25,7 @@ public struct Configuration {
     /// Node logger
     public var logger: Logger
 
-    public init(id: NodeId, host: String = "localhost", port: Int = 0) {
+    public init(id: NodeID, host: String = "localhost", port: Int = 0) {
         self.init(myself: Peer(id: id, host: host, port: port))
     }
 
@@ -61,7 +61,7 @@ public extension Configuration {
 
         /// Identifier of the peer
         /// Each peer id including self should be uniq
-        public let id: NodeId
+        public let id: NodeID
 
         /// Peer address
         public let host: String
@@ -69,7 +69,7 @@ public extension Configuration {
         /// Peer port
         public let port: Int
 
-        public init(id: NodeId, host: String, port: Int) {
+        public init(id: NodeID, host: String, port: Int) {
             self.id = id
             self.host = host
             self.port = port

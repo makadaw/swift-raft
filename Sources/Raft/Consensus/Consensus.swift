@@ -13,7 +13,7 @@ actor public class Consensus {
     }
 
     /// Current node id
-    var myself: NodeId {
+    var myself: NodeID {
         config.myself.id
     }
 
@@ -164,10 +164,10 @@ extension Consensus {
             let type: VoteType
 
             /// Candidate’s term
-            let term: Term.Id
+            let term: Term.ID
 
             /// Candidate requesting vote
-            let candidate: NodeId
+            let candidate: NodeID
 
             /// Index of candidate’s last log entry
             let lastLogIndex: UInt64

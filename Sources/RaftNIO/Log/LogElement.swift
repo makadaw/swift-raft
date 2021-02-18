@@ -17,8 +17,8 @@ protocol LogData {
 
 /// Log can contained not only application data, but also Raft messages
 enum LogElement<T: LogData> {
-    case configuration(termId: Term.Id, index: UInt64)
-    case data(termId: Term.Id, index: UInt64, data: T)
+    case configuration(termId: Term.ID, index: UInt64)
+    case data(termId: Term.ID, index: UInt64, data: T)
 }
 
 extension LogElement {
@@ -38,7 +38,7 @@ extension LogElement {
 }
 
 extension LogElement {
-    var term: Term.Id {
+    var term: Term.ID {
         switch self {
         case let .configuration(termId, _):
             return termId

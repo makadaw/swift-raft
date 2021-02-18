@@ -5,7 +5,7 @@ import XCTest
 @testable import Raft
 
 final class TermTests: XCTestCase {
-    let mySelf: NodeId = 1
+    let mySelf: NodeID = 1
 
     func testNext() {
         var term: Term = Term(myself: mySelf)

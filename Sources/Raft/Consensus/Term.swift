@@ -4,29 +4,29 @@
 
 /// Node term description. Collect together a term id and vote of the current term
 public struct Term {
-    public typealias Id = UInt64
+    public typealias ID = UInt64
 
     enum Error: Swift.Error {
-        case newTermLessThenCurrent(Id, Id)
+        case newTermLessThenCurrent(ID, ID)
     }
 
     /// Current node
-    let myself: NodeId
+    let myself: NodeID
 
     /// Latest term node has seen, increases monotonically
-    public private(set) var id: Id
+    public private(set) var id: ID
 
     /// `candidateId` that received vote in current term
-    public private(set) var votedFor: NodeId?
+    public private(set) var votedFor: NodeID?
 
     /// Current term leader
-    public var leader: NodeId?
+    public var leader: NodeID?
 
-    public init(myself: NodeId, id: Id = 0) {
+    public init(myself: NodeID, id: ID = 0) {
         self.init(myself: myself, id: id, votedFor: nil, leader: nil)
     }
 
-    init(myself: NodeId, id: Id, votedFor: NodeId?, leader: NodeId?) {
+    init(myself: NodeID, id: ID, votedFor: NodeID?, leader: NodeID?) {
         self.myself = myself
         self.id = id
         self.votedFor = votedFor
@@ -45,7 +45,7 @@ public struct Term {
     ///   - newTerm: new term id
     ///   - from: node that send us a message with higher term
     /// - Throws: error if new term is less then current
-    mutating public func tryToUpdateTerm(newTerm: Id, from: NodeId) throws {
+    mutating public func tryToUpdateTerm(newTerm: ID, from: NodeID) throws {
         guard newTerm > id else {
             throw Error.newTermLessThenCurrent(newTerm, id)
         }
@@ -57,7 +57,7 @@ public struct Term {
     ///   - term: next term to check
     ///   - from: node id that proposed it
     /// - Returns: true if node already voted for this term and candidate or accepted new term and vote for the candidate
-    mutating public func canAcceptNewTerm(_ term: Id, from: NodeId) -> Bool {
+    mutating public func canAcceptNewTerm(_ term: ID, from: NodeID) -> Bool {
         if id > term { // Current term is higher, we don't accpet elections from past
             return false
         } else if id == term && votedFor != from { // We already voted in this term for other candidate
@@ -69,7 +69,7 @@ public struct Term {
         return true
     }
 
-    mutating private func updateTerm(newTerm: Id, from: NodeId? = nil) {
+    mutating private func updateTerm(newTerm: ID, from: NodeID? = nil) {
         id = newTerm
         votedFor = from
         leader = nil
