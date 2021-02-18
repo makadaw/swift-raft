@@ -34,7 +34,7 @@ let package = Package(
             ],
             exclude: ["Proto/example.proto", "Proto/log.proto"]),
         .target(
-            name: "Raft",
+            name: "SwiftRaft",
             dependencies: [
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Logging", package: "swift-log"),
@@ -45,16 +45,16 @@ let package = Package(
         .target(
             name: "RaftNIO",
             dependencies: [
-                "Raft",
+                "SwiftRaft",
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
             ],
             exclude: ["Proto/raft.proto"]),
         .testTarget(
-            name: "RaftTests",
+            name: "SwiftRaftTests",
             dependencies: [
-                "Raft"
+                "SwiftRaft"
             ]),
         .testTarget(
             name: "RaftNIOTests",

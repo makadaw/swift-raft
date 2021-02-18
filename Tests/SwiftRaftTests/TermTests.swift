@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 import XCTest
-@testable import Raft
+@testable import SwiftRaft
 
 final class TermTests: XCTestCase {
     let mySelf: NodeID = 1

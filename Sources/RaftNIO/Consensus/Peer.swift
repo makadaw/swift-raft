@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 
-import Raft
+import SwiftRaft
 import GRPC
 import NIO
 

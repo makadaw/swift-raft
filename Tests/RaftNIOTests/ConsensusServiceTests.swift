@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 import XCTest
-import Raft
+import SwiftRaft
 import NIO
 import NIOHPACK
 import Logging

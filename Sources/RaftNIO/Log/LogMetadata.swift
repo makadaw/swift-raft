@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 
-import Raft
+import SwiftRaft
 
 struct LogMetadata {
     var termId: Term.ID?

@@ -3,7 +3,7 @@
 
 
 public protocol Peer {
-    func requestVote(_ request: Consensus.RequestVote.Request) async -> Consensus.RequestVote.Response
+    func requestVote(_ request: Raft.RequestVote.Request) async -> Raft.RequestVote.Response
 }
 
 extension RandomAccessCollection where Element == Peer {

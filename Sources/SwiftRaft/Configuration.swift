@@ -14,7 +14,7 @@ public struct Configuration {
     public var myself: Peer
 
     /// Raft protocol configuration
-    public var `protocol`: Raft = .init()
+    public var `protocol`: Consensus = .init()
 
     /// Log configuration
     public var log: Log
@@ -38,7 +38,7 @@ public struct Configuration {
 }
 
 public extension Configuration {
-    struct Raft {
+    struct Consensus {
 
         /// Election timeout. Use as a min time interval.
         public var electionTimeout: DispatchTimeInterval = .milliseconds(5000) {

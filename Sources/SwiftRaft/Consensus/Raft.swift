@@ -6,7 +6,7 @@ import struct Dispatch.DispatchTime
 import enum Dispatch.DispatchTimeInterval
 import Logging
 
-public actor Consensus {
+public actor Raft {
     let config: Configuration
     var logger: Logger {
         config.logger
@@ -43,7 +43,7 @@ public actor Consensus {
 }
 
 //MARK: Election
-extension Consensus {
+extension Raft {
 
     /// Commands related to changes in election process
     public enum ElectionCommand {
@@ -139,12 +139,14 @@ extension Consensus {
                 while let result = try await group.next() {
                     grantedVotes += result ? 1 : 0
                     if grantedVotes >= tallyVotes {
+                        group.cancelAll()
                         return true
                     }
                 }
                 return false
             } catch {
                 // If got any error we lost an election
+                group.cancelAll()
                 return false
             }
         }
@@ -208,7 +210,7 @@ extension Consensus {
 }
 
 // MARK: Entries
-extension Consensus {
+extension Raft {
     /// Process Entry append
     ///
     /// 1. Reply false if term `<` currentTerm (§5.1)

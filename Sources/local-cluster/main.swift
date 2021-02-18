@@ -3,7 +3,7 @@
 
 
 import RaftNIO
-import Raft
+import SwiftRaft
 import NIO
 import Lifecycle
 import Logging
