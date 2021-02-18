@@ -16,9 +16,7 @@ let package = Package(
     ],
     dependencies: [
         // Use version from main, wait for next release.
-        // We need last commit `2e9c1a71185c828416751283b40697725da550b6` but currently it failed to compile
-        // on the last toolchain. Wait until this MR will be in snapshot https://github.com/apple/swift/pull/35897
-        .package(url: "https://github.com/apple/swift-system", .revision("920ef3085d4c0a3abad12bdaa265e0670db98fc0")),
+        .package(url: "https://github.com/apple/swift-system", .revision("2e9c1a71185c828416751283b40697725da550b6")),
         .package(url: "https://github.com/apple/swift-log", from: "1.4.0"),
         .package(url: "https://github.com/grpc/grpc-swift", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "1.0.0-alpha.6"),

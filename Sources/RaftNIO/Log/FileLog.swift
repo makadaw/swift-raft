@@ -31,8 +31,8 @@ struct FileLog<T: LogData>: Log {
 
     init(root: FilePath, metadataFileName: String = "metadata") {
         self.root = root
-        if !FileManager.default.fileExists(atPath: root.path) {
-            try! FileManager.default.createDirectory(atPath: root.path, withIntermediateDirectories: true)
+        if !FileManager.default.fileExists(atPath: root.string) {
+            try! FileManager.default.createDirectory(atPath: root.string, withIntermediateDirectories: true)
         }
 
         self.metadataPath = root.appending(metadataFileName)
@@ -84,7 +84,7 @@ struct FileLog<T: LogData>: Log {
 extension FileLog {
 
     static func loadMetadata(from: FilePath) -> LogMetadata {
-        if FileManager.default.fileExists(atPath: from.path),
+        if FileManager.default.fileExists(atPath: from.string),
            let data = try? Foundation.Data(contentsOf: from.toURL),
            let metadata = try? Raft_LogMetadata(serializedData: data) {
             return LogMetadata.from(message: metadata)

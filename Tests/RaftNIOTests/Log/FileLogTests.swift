@@ -12,7 +12,7 @@ final class FileLogTests: XCTestCase {
 
     override func setUpWithError() throws {
         let tempDirectory = FilePath.defaultTemporaryDirectory("FileLog-Tests")
-        if FileManager.default.fileExists(atPath: tempDirectory.path) {
+        if FileManager.default.fileExists(atPath: tempDirectory.string) {
             try FileManager.default.removeItem(at: tempDirectory.toURL)
         }
         try FileManager.default.createDirectory(at: tempDirectory.toURL,
@@ -22,7 +22,7 @@ final class FileLogTests: XCTestCase {
 
     override func tearDownWithError() throws {
         if let location = self.location {
-            try FileManager.default.removeItem(atPath: location.path)
+            try FileManager.default.removeItem(atPath: location.string)
         }
 
     }
