@@ -45,11 +45,6 @@ actor public class Consensus {
 //MARK: Election
 extension Consensus {
 
-    func electionTimeoutInterval() -> DispatchTimeInterval {
-        .nanoseconds(Int(config.protocol.electionTimeout.nanoseconds
-                            + Int64.random(in: 1000...config.protocol.electionTimeout.nanoseconds)))
-    }
-
     /// Commands related to changes in election process
     public enum ElectionCommand {
         /// Stop election timer, this means that node not in a follower state
@@ -77,7 +72,7 @@ extension Consensus {
         if _tryMoveTo(nextState: .preCandidate) {
             return .startPreVote
         }
-        return .scheduleNextTimer(delay: electionTimeoutInterval())
+        return .scheduleNextTimer(delay: config.protocol.nextElectionTimeout)
     }
 
     public enum VoteType {
@@ -94,7 +89,7 @@ extension Consensus {
             return .startVote
         }
         logger.warning("Lost preVote for \(term)")
-        return .scheduleNextTimer(delay: electionTimeoutInterval())
+        return .scheduleNextTimer(delay: config.protocol.nextElectionTimeout)
     }
 
     /// Try to run a election campaign
@@ -108,7 +103,7 @@ extension Consensus {
             return .startToBeALeader
         }
         self.logger.debug("Failed to become a leader for \(self.term) term")
-        return .scheduleNextTimer(delay: electionTimeoutInterval())
+        return .scheduleNextTimer(delay: config.protocol.nextElectionTimeout)
     }
 
     /// Node is ready to start new vote

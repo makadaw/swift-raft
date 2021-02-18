@@ -40,7 +40,7 @@ public struct Configuration {
 public extension Configuration {
     struct Raft {
 
-        /// Election timeout
+        /// Election timeout. Use as a min time interval.
         public var electionTimeout: DispatchTimeInterval = .milliseconds(5000) {
             willSet {
                 precondition(heartbeatPeriod.nanoseconds < newValue.nanoseconds,
@@ -55,6 +55,14 @@ public extension Configuration {
                              "We should send heartbeat more often then run election")
             }
         }
+
+        /// Random election timeout interval. Should be used to schedule next election
+        public var nextElectionTimeout: DispatchTimeInterval {
+            .nanoseconds(Int(self.electionTimeout.nanoseconds
+                                + Int64.random(in: 1000...self.electionTimeout.nanoseconds)))
+
+        }
+
     }
 
     struct Peer {
