@@ -3,7 +3,7 @@
 
 
 import RaftNIO
-import Raft
+import SwiftRaft
 import NIO
 import Lifecycle
 import Logging
@@ -18,8 +18,8 @@ struct Start: ParsableCommand {
     @Option(help: "number of local nodes to start, use if peers is not provided")
     var num: Int = 0
 
-    @Option(help: "node id to run, skip if want to run all nodes", transform: { NodeId($0) ?? 0 })
-    var runNode: NodeId?
+    @Option(help: "node id to run, skip if want to run all nodes", transform: { NodeID($0) ?? 0 })
+    var runNode: NodeID?
 
     mutating func run() throws {
         let peers: [Configuration.Peer]
@@ -66,7 +66,7 @@ struct Start: ParsableCommand {
     func parsePeers(_ pattern: [String]) -> [Configuration.Peer] {
         pattern.compactMap { peer in
             let idHostPort = peer.split(separator: ":").map(String.init)
-            guard idHostPort.count == 3, let id = NodeId(idHostPort[0]), let port = Int(idHostPort[2]) else {
+            guard idHostPort.count == 3, let id = NodeID(idHostPort[0]), let port = Int(idHostPort[2]) else {
                 return nil
             }
             return Configuration.Peer(id: id, host: idHostPort[1], port: port)
@@ -75,7 +75,7 @@ struct Start: ParsableCommand {
 
     func testNodes(_ to: Int) -> [Configuration.Peer] {
         (1...to)
-            .map { Configuration.Peer(id: NodeId($0), host: "localhost", port: 8890 + $0) }
+            .map { Configuration.Peer(id: NodeID($0), host: "localhost", port: 8890 + $0) }
     }
 }
 

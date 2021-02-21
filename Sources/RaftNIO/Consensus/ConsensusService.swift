@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
-import Raft
+import SwiftRaft
 import GRPC
 import NIO
 import NIOConcurrencyHelpers
@@ -24,7 +24,7 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
     var interceptors: Raft_RaftServerInterceptorFactoryProtocol?
 
     /// Current node id
-    var myself: NodeId {
+    var myself: NodeID {
         config.myself.id
     }
 
@@ -124,7 +124,7 @@ extension ConsensusService: Raft_RaftProvider {
             }
         }
 
-        let (granted, currentTermId) = lock.withLock { () -> (Bool, Term.Id) in
+        let (granted, currentTermId) = lock.withLock { () -> (Bool, Term.ID) in
             let lastLogTerm = self.log.metadata.termId ?? 0
             // If the caller has a less complete log, we can't give it our vote.
             let isLogOk = request.lastLogTerm > lastLogTerm
@@ -275,7 +275,7 @@ extension ConsensusService {
     private func startVote(isPreVote: Bool) -> EventLoopFuture<Bool> {
         let resultPromise = eventLoop.makePromise(of: Bool.self)
         let allRequests = eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            let (termId, lastLogIndex, lastLogTerm) = self.lock.withLock { () -> (Term.Id, UInt, Term.Id) in
+            let (termId, lastLogIndex, lastLogTerm) = self.lock.withLock { () -> (Term.ID, UInt, Term.ID) in
                 let next = self.term.nextTerm()
                 if !isPreVote {
                     self.term = next

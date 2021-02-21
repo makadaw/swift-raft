@@ -2,10 +2,10 @@
 // Copyright © 2021 makadaw
 
 import XCTest
-@testable import Raft
+@testable import SwiftRaft
 
 final class TermTests: XCTestCase {
-    let mySelf: NodeId = 1
+    let mySelf: NodeID = 1
 
     func testNext() {
         var term: Term = Term(myself: mySelf)
