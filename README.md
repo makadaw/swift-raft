@@ -2,6 +2,7 @@
 
 Swift implementation of the [Raft protocol](https://raft.github.io/raft.pdf), 
 [more detailed research](https://github.com/ongardie/dissertation/blob/master/online-trim.pdf)
+[Visualisation of the protocol](http://thesecretlivesofdata.com/raft/)
 
 ## Implementation
 
