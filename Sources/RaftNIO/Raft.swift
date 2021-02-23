@@ -26,12 +26,12 @@ final public class RaftNIO {
         self.group = group
     }
 
-    public func start() {
+    public func start() throws {
         self.consensus = ConsensusService(
             group: group,
             config: config,
             peers: peers.map({ Peer(myself: config.myself.id, config: $0, rpcConfig: config.rpc, group: group) }),
-            log: FileLog<String>(root: config.log.root),
+            log: try FileLog<String>(root: config.log.root),
             logger: logger)
 
         let server = Server.insecure(group: group)

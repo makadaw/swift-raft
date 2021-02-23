@@ -31,7 +31,7 @@ struct Start: ParsableCommand {
             preconditionFailure("Peers should be provided or num is set, but not both")
         }
 
-        let tempDirectory = FilePath.defaultTemporaryDirectory()
+        let tempDirectory = try FilePath.mktemp(prefix: "File-Log", createDirectory: true, random: false)
 
         let lifecycle = ServiceLifecycle()
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
@@ -54,7 +54,7 @@ struct Start: ParsableCommand {
 
                 lifecycle.register(
                     label: "raft-\(node.id)",
-                    start: .sync { raftNode.start() },
+                    start: .sync { try raftNode.start() },
                     shutdown: .sync {
                         try raftNode.shutdown()?.wait()
                     })
