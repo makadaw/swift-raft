@@ -26,7 +26,7 @@ public struct Term {
         self.init(myself: myself, id: id, votedFor: nil, leader: nil)
     }
 
-    init(myself: NodeID, id: ID, votedFor: NodeID?, leader: NodeID?) {
+    init(myself: NodeID, id: ID, votedFor: NodeID?, leader: NodeID? = nil) {
         self.myself = myself
         self.id = id
         self.votedFor = votedFor

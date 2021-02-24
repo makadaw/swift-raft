@@ -5,14 +5,50 @@
 import XCTest
 @testable import SwiftRaft
 
+extension Raft {
+    func getTerm() async -> Term {
+        term
+    }
+
+    func becomeLeader() async {
+        state = .leader
+        term = Term(myself: config.myself.id, id: 10)
+    }
+}
+
 final class ConsensusTests: XCTestCase {
 
     var testConfiguration: Configuration {
         Configuration(id: 1)
     }
 
+    func testInitWithLogTerm() {
+        var log = ArrayLog<String>()
+        log.metadata.termId = 3
+        log.metadata.voteFor = 1
+        let instance = Raft(config: testConfiguration, peers: [], log: log)
+        runAsyncTestAndBlock {
+            let term = await instance.getTerm()
+            XCTAssertEqual(term.id, 3)
+            XCTAssertEqual(term.votedFor, 1)
+        }
+    }
+}
+
+extension ConsensusTests {
+
+    func testElection() {
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
+        runAsyncTestAndBlock {
+            await instance.becomeLeader()
+            let response = await instance.onVoteRequest(.init(type: .vote, term: 3, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.term.id, 10)
+            XCTAssertFalse(response.voteGranted)
+        }
+    }
+    
     func testElectionTimeoutOnStart() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             let command = await instance.onElectionTimeout()
             if case .startPreVote = command {
@@ -23,8 +59,19 @@ final class ConsensusTests: XCTestCase {
         }
     }
 
-    func testResponseKeepTheSameType() {
-        let instance = Raft(config: testConfiguration, peers: [])
+    func testVoteRequestCheckLogsIndex() {
+        var log = ArrayLog<String>()
+        _ = log.append([.data(termId: 1, index: 1, content: "Entity")])
+        let instance = Raft(config: testConfiguration, peers: [], log: log)
+        runAsyncTestAndBlock {
+            // Request vote for the next term, but with lower log index
+            let response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertFalse(response.voteGranted)
+        }
+    }
+
+    func testVoteResponseKeepTheSameType() {
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             var response = await instance.onVoteRequest(.init(type: .preVote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.type, .preVote)
@@ -34,7 +81,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testPreVoteForHigherTerm() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             let response = await instance.onVoteRequest(.init(type: .preVote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.term.id, 0, "PreVote phase do not change current node term")
@@ -43,7 +90,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testPreVoteForTheSameTerm() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             let response = await instance.onVoteRequest(.init(type: .preVote, term: 0, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.term.id, 0)
@@ -52,7 +99,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testVoteForHigherTerm() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             let response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.term.id, 1, "After granted vote node set new term for itself")
@@ -61,7 +108,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testVoteForTheSameTerm() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             var response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertTrue(response.voteGranted)
@@ -72,7 +119,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testVoteForTheHigherTerms() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             var response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.term.id, 1)
@@ -84,7 +131,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testVoteForTheLowerTerms() {
-        let instance = Raft(config: testConfiguration, peers: [])
+        let instance = Raft(config: testConfiguration, peers: [], log: ArrayLog<String>())
         runAsyncTestAndBlock {
             var response = await instance.onVoteRequest(.init(type: .vote, term: 2, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.term.id, 2)

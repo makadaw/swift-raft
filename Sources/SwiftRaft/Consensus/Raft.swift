@@ -22,14 +22,23 @@ public actor Raft {
     /// Latest term server has seen, increases monotonically
     var term: Term
 
+    /// Current state. Should not changed directly, use `_tryMoveTo(nextState:)` method
     var state: State
 
-    init(config: Configuration, peers: [Peer]) {
+    /// Application log
+    var log: BaseLog
+
+    init<ApplicationLog>(config: Configuration, peers: [Peer], log: ApplicationLog) where ApplicationLog: Log {
         self.config = config
         self.peers = peers
+        self.log = AnyLog(log: log)
 
-        self.term = Term(myself: config.myself.id)
         self.state = .follower
+
+        self.term = Term(myself: config.myself.id,
+                         id: log.metadata.termId ?? 0, // Start with a default term id 0
+                         votedFor: log.metadata.voteFor)
+        self.logger.debug("The log contains indexes \(log.logStartIndex) through \(log.logLastIndex)")
     }
 
     /// States switch machine
@@ -46,7 +55,7 @@ public actor Raft {
 extension Raft {
 
     /// Commands related to changes in election process
-    public enum ElectionCommand {
+    public enum ElectionCommand: Equatable {
         /// Stop election timer, this means that node not in a follower state
         case stopTimer
 
@@ -193,10 +202,15 @@ extension Raft {
     func onVoteRequest(_ request: RequestVote.Request) async -> RequestVote.Response {
         // TODO: On vote response we also should reset election timer
         let granted: Bool = {
+            let lastLogTerm = self.log.metadata.termId ?? 0
+            // If the caller has a less complete log, we can't give it our vote.
+            let isLogOk = request.lastLogTerm > lastLogTerm
+                        || (request.lastLogTerm == lastLogTerm
+                            && request.lastLogIndex >= self.log.logLastIndex)
             if request.type == .preVote {
-                return request.term > term.id
+                return isLogOk && request.term > term.id
             } else {
-                return term.canAcceptNewTerm(request.term, from: request.candidate)
+                return isLogOk && term.canAcceptNewTerm(request.term, from: request.candidate)
             }
         }()
         logger.debug("Vote response \(granted)", metadata: [
