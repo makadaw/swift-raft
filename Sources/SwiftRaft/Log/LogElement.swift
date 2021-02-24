@@ -3,42 +3,24 @@
 
 
 import Foundation
-import SwiftRaft
 
 /// Protocol constraints for Data that we can store in the Log entry. This protocol should be implemented
 /// by consumer and represent application data, not Raft types
-protocol LogData {
-    // TODO Use internal type to represent bytes, instead of Foundation.Data
+public protocol LogData {
+    // TODO Replace foundation Data with custom type
     init?(data: Data)
 
     /// Log element data size in bytes
     var size: Int { get }
 }
 
-
 /// Log can contained not only application data, but also Raft messages
-enum LogElement<T: LogData> {
+public enum LogElement<T: LogData> {
     case configuration(termId: Term.ID, index: UInt64)
-    case data(termId: Term.ID, index: UInt64, data: T)
+    case data(termId: Term.ID, index: UInt64, content: T)
 }
 
-extension LogElement {
-    init?(_ raftLog: Raft_Entry) {
-        switch raftLog.type {
-            case .configuration:
-                self = LogElement.configuration(termId: raftLog.term, index: raftLog.index)
-            case .data:
-                guard let data = T.init(data: raftLog.data) else {
-                    return nil
-                }
-                self = LogElement.data(termId: raftLog.term, index: raftLog.index, data: data)
-            default:
-                return nil
-        }
-    }
-}
-
-extension LogElement {
+public extension LogElement {
     var term: Term.ID {
         switch self {
         case let .configuration(termId, _):
@@ -66,12 +48,12 @@ extension LogElement {
         }
     }
 
-    var data: T? {
+    var content: T? {
         switch self {
         case .configuration(_, _):
             return nil
-        case let .data(_, _, data):
-            return data
+        case let .data(_, _, content):
+            return content
         }
     }
 }

@@ -3,6 +3,7 @@
 
 
 import SystemPackage
+import SwiftRaft
 import NIO
 import SwiftProtobuf
 

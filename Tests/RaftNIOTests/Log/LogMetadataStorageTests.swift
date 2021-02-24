@@ -4,6 +4,7 @@
 
 import XCTest
 import SystemPackage
+import SwiftRaft
 @testable import RaftNIO
 
 
