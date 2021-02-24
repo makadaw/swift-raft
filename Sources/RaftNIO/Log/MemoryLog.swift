@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
-import NIO
 
+import SwiftRaft
+import NIO
 
 struct MemoryLog<T: LogData>: Log {
     typealias Data = T

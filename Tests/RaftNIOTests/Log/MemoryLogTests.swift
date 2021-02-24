@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2021 makadaw
 
+
 import XCTest
+import SwiftRaft
 @testable import RaftNIO
 
 // Use LogCabin test case to validate memory log
@@ -11,7 +13,7 @@ final class MemoryLogTests: XCTestCase {
     }
 
     var sample: LogElement<String> {
-        .data(termId: 42, index: 0, data: "foo")
+        .data(termId: 42, index: 0, content: "foo")
     }
 
     func testBasic() {
@@ -21,7 +23,7 @@ final class MemoryLogTests: XCTestCase {
         XCTAssertEqual(1, range.upperBound)
         let entry = try! log.entry(at: 1)
         XCTAssertEqual(42, entry.term)
-        XCTAssertEqual("foo", entry.data)
+        XCTAssertEqual("foo", entry.content)
     }
 
     func testAppend() {
@@ -43,13 +45,13 @@ final class MemoryLogTests: XCTestCase {
         XCTAssertThrowsError(try log.entry(at: 0))
         XCTAssertThrowsError(try log.entry(at: 2))
 
-        let sampleEntry = LogElement.data(termId: 42, index: 0, data: "bar")
+        let sampleEntry = LogElement.data(termId: 42, index: 0, content: "bar")
         _ = log.append([sampleEntry])
         log.truncatePrefix(2)
         XCTAssertThrowsError(try log.entry(at: 1))
         _ = log.append([sampleEntry])
         let entry2 = try! log.entry(at: 2) //log[2]
-        XCTAssertEqual("bar", entry2.data)
+        XCTAssertEqual("bar", entry2.content)
     }
 
     func testLogStartIndex() {
@@ -106,12 +108,12 @@ final class MemoryLogTests: XCTestCase {
         XCTAssertEqual(0, log.count)
 
         // case 4: entries has more elements than truncated
-        let sampleEntry = LogElement.data(termId: 42, index: 0, data: "bar")
+        let sampleEntry = LogElement.data(termId: 42, index: 0, content: "bar")
         _ = log.append([sample, sample, sampleEntry])
         log.truncatePrefix(506)
         XCTAssertEqual(506, log.startIndex)
         XCTAssertEqual(1, log.count)
-        XCTAssertEqual(sampleEntry.data, log.storage[offset: 0].data)
+        XCTAssertEqual(sampleEntry.content, log.storage[offset: 0].content)
 
         // make sure truncating to an earlier id has no effect
         log.truncatePrefix(400)

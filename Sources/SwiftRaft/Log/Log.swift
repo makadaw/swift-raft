@@ -2,15 +2,13 @@
 // Copyright © 2021 makadaw
 
 
-import NIO
-
 /// Log errors
-enum LogError: Error {
+public enum LogError: Error {
     case outOfRange
 }
 
 /// Represent a Raft log
-protocol Log: Sequence where Element == LogElement<Data> {
+public protocol Log: Sequence where Element == LogElement<Data> {
     associatedtype Data: LogData
 
     /// First index in the log, it could be not 0 as log can be trimmed
@@ -44,7 +42,7 @@ protocol Log: Sequence where Element == LogElement<Data> {
     var metadata: LogMetadata { get set }
 }
 
-extension Log {
+public extension Log {
     var sizeBytes: UInt {
         UInt(reduce(0) { acc, element in
             acc + element.sizeBytes

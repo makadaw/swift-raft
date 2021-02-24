@@ -59,11 +59,11 @@ final public class RaftNIO {
 // Use string as dummy application data
 extension String: LogData {
 
-    init?(data: Data) {
+    public init?(data: Data) {
         self.init(data: data, encoding: .utf8)
     }
 
-    var size: Int {
+    public var size: Int {
         self.data(using: .utf8)?.count ?? 0
     }
 }
