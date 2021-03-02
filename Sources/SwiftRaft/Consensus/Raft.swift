@@ -225,14 +225,116 @@ extension Raft {
 
 // MARK: Entries
 extension Raft {
+
+    public struct AppendEntries {
+
+        public struct Request<T: LogData>: ConcurrentValue {
+            public typealias Element = LogElement<T>
+            
+            /// Current leader term id. Followers use them to validate correctness
+            public let termID: Term.ID
+
+            /// Leader id in the cluster
+            public let leaderId: NodeID
+
+            /// Index of log entry immediately preceding new ones
+            public let prevLogIndex: UInt64
+
+            /// Term id of prevLogIndex entry
+            public let prevLogTerm: UInt64
+
+            /// Leader’s commit index
+            public let leaderCommit: UInt64
+
+            // TODO Make sure compiler can check that generic argument is `ConcurrentValue`
+            /// Log entries to store (empty for heartbeat; may send more than one for efficiency)
+//            public let entries: [Element]
+
+            public init(termID: Term.ID,
+                        leaderId: NodeID,
+                        prevLogIndex: UInt64,
+                        prevLogTerm: UInt64,
+                        leaderCommit: UInt64,
+                        entries: [Element]) {
+                self.termID = termID
+                self.leaderId = leaderId
+                self.prevLogIndex = prevLogIndex
+                self.prevLogTerm = prevLogTerm
+                self.leaderCommit = leaderCommit
+//                self.entries = entries
+            }
+        }
+
+        public struct Response: ConcurrentValue {
+            /// Current node term, for leader to update itself
+            public let termID: Term.ID
+
+            /// True if a follower accepted the message
+            public let success: Bool
+            
+            public let commands: [EntriesCommand]
+
+            public init(termID: Term.ID, success: Bool, commands: [EntriesCommand]) {
+                self.termID = termID
+                self.success = success
+                self.commands = commands
+            }
+        }
+    }
+
+    public enum EntriesCommand: ConcurrentValue, Equatable {
+        /// For non leader state reset an election timer
+        case resetElectionTimer
+    }
+
     /// Process Entry append
-    ///
-    /// 1. Reply false if term `<` currentTerm (§5.1)
-    /// 2. Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
-    /// 3. If an existing entry conflicts with a new one (same index but different terms), delete the existing entry and all that follow it (§5.3)
-    /// 4. Append any new entries not already in the log
-    /// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
-    func onAppendEntries() async -> Void {
-        // TODO
+    func onAppendEntries<T: LogData>(_ request: AppendEntries.Request<T>) async -> AppendEntries.Response {
+        // 1. Reply false if term `<` currentTerm (§5.1)
+        guard request.termID <= self.term.id else {
+            return rejectAppendEntry(leader: request.leaderId, higherTermID: request.termID)
+        }
+        // Update leader id
+        if self.term.leader == nil {
+            self.term.leader = request.leaderId
+        }
+        logger.debug("Receive message", metadata: [
+            "message/term": "\(request.termID)",
+            "message/leader": "\(request.leaderId)"
+        ])
+
+        var commands = Array<EntriesCommand>()
+        let isIAmAFollower = _tryMoveTo(nextState: .follower)
+        let isLogOk = true
+        // 2. Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
+        // 3. If an existing entry conflicts with a new one (same index but different terms), delete the existing entry and all that follow it (§5.3)
+        // 4. Append any new entries not already in the log
+        // 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
+
+        // At the end node should reset an election timer if not a leader. This is a very important step
+        if !state.isLeader {
+            // Reset election timer if node is not a leader
+            commands.append(.resetElectionTimer)
+        }
+        return AppendEntries.Response(termID: term.id, success: isIAmAFollower && isLogOk, commands: commands)
+    }
+    
+    private func rejectAppendEntry(leader: NodeID, higherTermID termID: Term.ID) -> AppendEntries.Response {
+        do {
+            try self.term.tryToUpdateTerm(newTerm: termID, from: leader)
+            if !_tryMoveTo(nextState: .follower) {
+                logger.debug("Got term greater than current and failed to move to the follower state",
+                             metadata: ["node/state": "\(self.state)",
+                                        "node/term": "\(self.term)",
+                                        "message/term": "\(termID)"])
+            }
+        } catch let error {
+            logger.error("Error on step down into term \(termID)",
+                         metadata: ["node/state": "\(self.state)",
+                                    "node/term": "\(self.term)",
+                                    "message/term": "\(termID)",
+                                    "error": "\(error)"])
+        }
+        // Response with reject and reset election timer, as we not a leader anymore
+        return AppendEntries.Response(termID: term.id, success: false, commands: [.resetElectionTimer])
     }
 }
