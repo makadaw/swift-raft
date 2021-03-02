@@ -225,6 +225,62 @@ extension Raft {
 
 // MARK: Entries
 extension Raft {
+
+    public struct AppendEntries {
+
+        public struct Request<T: LogData> {
+            /// Current leader term id. Followers use them to validate correctness
+            public let termId: Term.ID
+
+            /// Leader id in the cluster
+            public let leaderId: NodeID
+
+            /// Index of log entry immediately preceding new ones
+            public let prevLogIndex: UInt64
+
+            /// Term id of prevLogIndex entry
+            public let prevLogTerm: UInt64
+
+            /// Leader’s commit index
+            public let leaderCommit: UInt64
+
+            /// Log entries to store (empty for heartbeat; may send more than one for efficiency)
+            public let entries: [LogElement<T>]
+
+            public init(termId: Term.ID,
+                        leaderId: NodeID,
+                        prevLogIndex: UInt64,
+                        prevLogTerm: UInt64,
+                        leaderCommit: UInt64,
+                        entries: [LogElement<T>]) {
+                self.termId = termId
+                self.leaderId = leaderId
+                self.prevLogIndex = prevLogIndex
+                self.prevLogTerm = prevLogTerm
+                self.leaderCommit = leaderCommit
+                self.entries = entries
+            }
+        }
+
+        public struct Response {
+            /// Current node term, for leader to update itself
+            public let termId: Term.ID
+
+            /// True if a follower accepted the message
+            public let success: Bool
+
+            public init(termId: Term.ID, success: Bool) {
+                self.termId = termId
+                self.success = success
+            }
+        }
+    }
+
+    public enum EntriesCommand: Equatable {
+        /// For non leader state reset an election timer
+        case resetElectionTimer
+    }
+
     /// Process Entry append
     ///
     /// 1. Reply false if term `<` currentTerm (§5.1)
@@ -232,7 +288,44 @@ extension Raft {
     /// 3. If an existing entry conflicts with a new one (same index but different terms), delete the existing entry and all that follow it (§5.3)
     /// 4. Append any new entries not already in the log
     /// 5. If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
-    func onAppendEntries() async -> Void {
-        // TODO
+    /// Return a pair of side-effects and a response
+    func onAppendEntries<T: LogData>(_ request: AppendEntries.Request<T>) async -> ([EntriesCommand], AppendEntries.Response) {
+        var commands = Array<EntriesCommand>()
+        if request.termId > self.term.id {
+            // got a message with higher term, step down to a follower
+            do {
+                try term.tryToUpdateTerm(newTerm: request.termId, from: request.leaderId)
+                if !_tryMoveTo(nextState: .follower) {
+                    logger.debug("Got term greater than current and failed to move to the follower state")
+                }
+                // Reset election timer, as we not a leader anymore
+                commands.append(.resetElectionTimer)
+            } catch let error {
+                logger.error("Error on stepdown into term \(request.termId). \(error)",
+                             metadata: ["message/term": "\(term)"])
+            }
+            return (commands, AppendEntries.Response(termId: term.id, success: false))
+        }
+        if self.term.leader == nil {
+            self.term.leader = request.leaderId
+        }
+
+        logger.debug("Receive message", metadata: [
+            "message/term": "\(term.id)",
+            "message/leader": "\(term.leader ?? 0)"
+        ])
+
+        let isIAmAFollower = _tryMoveTo(nextState: .follower)
+        let isLogOk = true
+        for _ in request.entries {
+            // TODO: Check log entries terms and indices, add missing messages to the log
+        }
+
+        // At the end node should reset an election timer if not a leader. This is a very important step
+        if !state.isLeader {
+            // Reset election timer node is not a leader
+            commands.append(.resetElectionTimer)
+        }
+        return (commands, AppendEntries.Response(termId: term.id, success: isIAmAFollower && isLogOk))
     }
 }
