@@ -31,7 +31,10 @@ struct Start: ParsableCommand {
             preconditionFailure("Peers should be provided or num is set, but not both")
         }
 
-        let tempDirectory = try FilePath.mktemp(prefix: "File-Log", createDirectory: true, random: false)
+        let tempDirectory = FilePath.temporaryDirectory.appending("File-Log")
+        if !tempDirectory.isPathExist() {
+            try tempDirectory.createDirectory()
+        }
 
         let lifecycle = ServiceLifecycle()
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
