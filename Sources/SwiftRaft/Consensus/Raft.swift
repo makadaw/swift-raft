@@ -84,7 +84,7 @@ extension Raft {
         return .scheduleNextTimer(delay: config.protocol.nextElectionTimeout)
     }
 
-    public enum VoteType {
+    public enum VoteType: ConcurrentValue {
         case preVote
         case vote
     }
@@ -165,7 +165,7 @@ extension Raft {
     /// Vote request message. Use for both pre and real vote
     public struct RequestVote {
 
-        public struct Request {
+        public struct Request: ConcurrentValue {
             /// Vote type `vote` or `PreVote`
             let type: VoteType
 
@@ -183,12 +183,12 @@ extension Raft {
 
         }
 
-        public struct Response {
+        public struct Response: ConcurrentValue {
             /// Vote type `vote` or `PreVote`, should be the the same as in request
             let type: VoteType
 
             /// Current term of the node, for candidate to update itself
-            let term: Term
+            let term: Term.ID
 
             /// True means candidate received vote
             let voteGranted: Bool
@@ -218,7 +218,7 @@ extension Raft {
             "vote/candidate": "\(request.candidate)",
             "vote/granted": "\(granted)"
         ])
-        return .init(type: request.type, term: self.term, voteGranted: granted)
+        return .init(type: request.type, term: self.term.id, voteGranted: granted)
     }
 
 }

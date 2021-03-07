@@ -42,7 +42,7 @@ extension ConsensusTests {
         runAsyncTestAndBlock {
             await instance.becomeLeader()
             let response = await instance.onVoteRequest(.init(type: .vote, term: 3, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 10)
+            XCTAssertEqual(response.term, 10)
             XCTAssertFalse(response.voteGranted)
         }
     }
@@ -84,7 +84,7 @@ extension ConsensusTests {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
             let response = await instance.onVoteRequest(.init(type: .preVote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 0, "PreVote phase do not change current node term")
+            XCTAssertEqual(response.term, 0, "PreVote phase do not change current node term")
             XCTAssertTrue(response.voteGranted)
         }
     }
@@ -93,7 +93,7 @@ extension ConsensusTests {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
             let response = await instance.onVoteRequest(.init(type: .preVote, term: 0, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 0)
+            XCTAssertEqual(response.term, 0)
             XCTAssertFalse(response.voteGranted)
         }
     }
@@ -102,7 +102,7 @@ extension ConsensusTests {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
             let response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 1, "After granted vote node set new term for itself")
+            XCTAssertEqual(response.term, 1, "After granted vote node set new term for itself")
             XCTAssertTrue(response.voteGranted)
         }
     }
@@ -113,7 +113,7 @@ extension ConsensusTests {
             var response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertTrue(response.voteGranted)
             response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 3, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 1)
+            XCTAssertEqual(response.term, 1)
             XCTAssertFalse(response.voteGranted, "Node can vote only for one candidate per term")
         }
     }
@@ -122,10 +122,10 @@ extension ConsensusTests {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
             var response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 1)
+            XCTAssertEqual(response.term, 1)
             XCTAssertTrue(response.voteGranted)
             response = await instance.onVoteRequest(.init(type: .vote, term: 2, candidate: 3, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 2)
+            XCTAssertEqual(response.term, 2)
             XCTAssertTrue(response.voteGranted)
         }
     }
@@ -134,10 +134,10 @@ extension ConsensusTests {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
             var response = await instance.onVoteRequest(.init(type: .vote, term: 2, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 2)
+            XCTAssertEqual(response.term, 2)
             XCTAssertTrue(response.voteGranted)
             response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 3, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term.id, 2)
+            XCTAssertEqual(response.term, 2)
             XCTAssertFalse(response.voteGranted)
         }
     }

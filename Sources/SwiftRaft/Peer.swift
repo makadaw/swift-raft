@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 
-public protocol Peer {
+public protocol Peer: Actor {
     func requestVote(_ request: Raft.RequestVote.Request) async -> Raft.RequestVote.Response
 }
 

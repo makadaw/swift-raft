@@ -6,7 +6,7 @@ import Foundation
 
 /// Protocol constraints for Data that we can store in the Log entry. This protocol should be implemented
 /// by consumer and represent application data, not Raft types
-public protocol LogData {
+public protocol LogData: ConcurrentValue {
     // TODO Replace foundation Data with custom type
     init?(data: Data)
 
@@ -15,7 +15,7 @@ public protocol LogData {
 }
 
 /// Log can contained not only application data, but also Raft messages
-public enum LogElement<T: LogData> {
+public enum LogElement<T: LogData>: ConcurrentValue {
     case configuration(termId: Term.ID, index: UInt64)
     case data(termId: Term.ID, index: UInt64, content: T)
 }
