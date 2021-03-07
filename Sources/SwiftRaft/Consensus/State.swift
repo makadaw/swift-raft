@@ -11,6 +11,16 @@ enum State: String {
 }
 
 extension State {
+
+    var isLeader: Bool {
+        switch self {
+            case .leader:
+                return true
+            default:
+                return false
+        }
+    }
+
     func  isValidNext(state nextState: State) -> Bool {
         guard self != nextState else {
             return true
