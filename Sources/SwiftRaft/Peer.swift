@@ -3,7 +3,7 @@
 
 
 public protocol Peer: Actor {
-    func requestVote(_ request: Raft.RequestVote.Request) async -> Raft.RequestVote.Response
+    func requestVote(_ request: RequestVote.Request) async -> RequestVote.Response
 }
 
 extension RandomAccessCollection where Element == Peer {
