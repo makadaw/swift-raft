@@ -24,7 +24,7 @@ final class RaftTests: XCTestCase {
 
     func testInitWithLogTerm() {
         var log = ArrayLog<String>()
-        log.metadata.termId = 3
+        log.metadata.termID = 3
         log.metadata.voteFor = 1
         let instance = buildTestInstance(log: log)
         runAsyncTestAndBlock {

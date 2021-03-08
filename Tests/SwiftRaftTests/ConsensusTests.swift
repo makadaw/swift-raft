@@ -11,8 +11,8 @@ final class ConsensusTests: XCTestCase {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
             await instance.becomeLeader()
-            let response = await instance.onVoteRequest(.init(type: .vote, term: 3, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 10)
+            let response = await instance.onVoteRequest(.init(type: .vote, termID: 3, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 10)
             XCTAssertFalse(response.voteGranted)
         }
     }
@@ -35,7 +35,7 @@ final class ConsensusTests: XCTestCase {
         let instance = buildTestInstance(log: log)
         runAsyncTestAndBlock {
             // Request vote for the next term, but with lower log index
-            let response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
+            let response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertFalse(response.voteGranted)
         }
     }
@@ -43,9 +43,9 @@ final class ConsensusTests: XCTestCase {
     func testVoteResponseKeepTheSameType() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            var response = await instance.onVoteRequest(.init(type: .preVote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
+            var response = await instance.onVoteRequest(.init(type: .preVote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.type, .preVote)
-            response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
+            response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.type, .vote)
         }
     }
@@ -53,8 +53,8 @@ final class ConsensusTests: XCTestCase {
     func testPreVoteForHigherTerm() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            let response = await instance.onVoteRequest(.init(type: .preVote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 0, "PreVote phase do not change current node term")
+            let response = await instance.onVoteRequest(.init(type: .preVote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 0, "PreVote phase do not change current node term")
             XCTAssertTrue(response.voteGranted)
         }
     }
@@ -62,8 +62,8 @@ final class ConsensusTests: XCTestCase {
     func testPreVoteForTheSameTerm() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            let response = await instance.onVoteRequest(.init(type: .preVote, term: 0, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 0)
+            let response = await instance.onVoteRequest(.init(type: .preVote, termID: 0, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 0)
             XCTAssertFalse(response.voteGranted)
         }
     }
@@ -71,8 +71,8 @@ final class ConsensusTests: XCTestCase {
     func testVoteForHigherTerm() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            let response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 1, "After granted vote node set new term for itself")
+            let response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 1, "After granted vote node set new term for itself")
             XCTAssertTrue(response.voteGranted)
         }
     }
@@ -80,10 +80,10 @@ final class ConsensusTests: XCTestCase {
     func testVoteForTheSameTerm() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            var response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
+            var response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertTrue(response.voteGranted)
-            response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 3, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 1)
+            response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 3, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 1)
             XCTAssertFalse(response.voteGranted, "Node can vote only for one candidate per term")
         }
     }
@@ -91,11 +91,11 @@ final class ConsensusTests: XCTestCase {
     func testVoteForTheHigherTerms() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            var response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 1)
+            var response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 1)
             XCTAssertTrue(response.voteGranted)
-            response = await instance.onVoteRequest(.init(type: .vote, term: 2, candidate: 3, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 2)
+            response = await instance.onVoteRequest(.init(type: .vote, termID: 2, candidateID: 3, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 2)
             XCTAssertTrue(response.voteGranted)
         }
     }
@@ -103,11 +103,11 @@ final class ConsensusTests: XCTestCase {
     func testVoteForTheLowerTerms() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            var response = await instance.onVoteRequest(.init(type: .vote, term: 2, candidate: 2, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 2)
+            var response = await instance.onVoteRequest(.init(type: .vote, termID: 2, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 2)
             XCTAssertTrue(response.voteGranted)
-            response = await instance.onVoteRequest(.init(type: .vote, term: 1, candidate: 3, lastLogIndex: 0, lastLogTerm: 0))
-            XCTAssertEqual(response.term, 2)
+            response = await instance.onVoteRequest(.init(type: .vote, termID: 1, candidateID: 3, lastLogIndex: 0, lastLogTerm: 0))
+            XCTAssertEqual(response.termID, 2)
             XCTAssertFalse(response.voteGranted)
         }
     }

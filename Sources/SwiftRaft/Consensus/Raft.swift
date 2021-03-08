@@ -36,7 +36,7 @@ public actor Raft {
         self.state = .follower
 
         self.term = Term(myself: config.myself.id,
-                         id: log.metadata.termId ?? 0, // Start with a default term id 0
+                         id: log.metadata.termID ?? 0, // Start with a default term id 0
                          votedFor: log.metadata.voteFor)
         self.logger.debug("The log contains indexes \(log.logStartIndex) through \(log.logLastIndex)")
     }
@@ -125,8 +125,8 @@ extension Raft {
         // How much votes we need to win
         let tallyVotes = self.peers.quorumSize
         let request = RequestVote.Request(type: type,
-                                          term: term.id,
-                                          candidate: myself,
+                                          termID: term.id,
+                                          candidateID: myself,
                                           lastLogIndex: 0,
                                           lastLogTerm: 0)
         // Get list of active peers
@@ -170,10 +170,10 @@ extension Raft {
             let type: VoteType
 
             /// Candidate’s term
-            let term: Term.ID
+            let termID: Term.ID
 
             /// Candidate requesting vote
-            let candidate: NodeID
+            let candidateID: NodeID
 
             /// Index of candidate’s last log entry
             let lastLogIndex: UInt64
@@ -188,7 +188,7 @@ extension Raft {
             let type: VoteType
 
             /// Current term of the node, for candidate to update itself
-            let term: Term.ID
+            let termID: Term.ID
 
             /// True means candidate received vote
             let voteGranted: Bool
@@ -202,23 +202,23 @@ extension Raft {
     func onVoteRequest(_ request: RequestVote.Request) async -> RequestVote.Response {
         // TODO: On vote response we also should reset election timer
         let granted: Bool = {
-            let lastLogTerm = self.log.metadata.termId ?? 0
+            let lastLogTerm = self.log.metadata.termID ?? 0
             // If the caller has a less complete log, we can't give it our vote.
             let isLogOk = request.lastLogTerm > lastLogTerm
                         || (request.lastLogTerm == lastLogTerm
                             && request.lastLogIndex >= self.log.logLastIndex)
             if request.type == .preVote {
-                return isLogOk && request.term > term.id
+                return isLogOk && request.termID > term.id
             } else {
-                return isLogOk && term.canAcceptNewTerm(request.term, from: request.candidate)
+                return isLogOk && term.canAcceptNewTerm(request.termID, from: request.candidateID)
             }
         }()
         logger.debug("Vote response \(granted)", metadata: [
             "vote/self": "\(myself)",
-            "vote/candidate": "\(request.candidate)",
+            "vote/candidate": "\(request.candidateID)",
             "vote/granted": "\(granted)"
         ])
-        return .init(type: request.type, term: self.term.id, voteGranted: granted)
+        return .init(type: request.type, termID: self.term.id, voteGranted: granted)
     }
 
 }
@@ -235,7 +235,7 @@ extension Raft {
             public let termID: Term.ID
 
             /// Leader id in the cluster
-            public let leaderId: NodeID
+            public let leaderID: NodeID
 
             /// Index of log entry immediately preceding new ones
             public let prevLogIndex: UInt64
@@ -251,13 +251,13 @@ extension Raft {
 //            public let entries: [Element]
 
             public init(termID: Term.ID,
-                        leaderId: NodeID,
+                        leaderID: NodeID,
                         prevLogIndex: UInt64,
                         prevLogTerm: UInt64,
                         leaderCommit: UInt64,
                         entries: [Element]) {
                 self.termID = termID
-                self.leaderId = leaderId
+                self.leaderID = leaderID
                 self.prevLogIndex = prevLogIndex
                 self.prevLogTerm = prevLogTerm
                 self.leaderCommit = leaderCommit
@@ -291,15 +291,15 @@ extension Raft {
     func onAppendEntries<T: LogData>(_ request: AppendEntries.Request<T>) async -> AppendEntries.Response {
         // 1. Reply false if term `<` currentTerm (§5.1)
         guard request.termID <= self.term.id else {
-            return rejectAppendEntry(leader: request.leaderId, higherTermID: request.termID)
+            return rejectAppendEntry(leader: request.leaderID, higherTermID: request.termID)
         }
         // Update leader id
-        if self.term.leader == nil {
-            self.term.leader = request.leaderId
+        if self.term.leaderID == nil {
+            self.term.leaderID = request.leaderID
         }
         logger.debug("Receive message", metadata: [
             "message/term": "\(request.termID)",
-            "message/leader": "\(request.leaderId)"
+            "message/leader": "\(request.leaderID)"
         ])
 
         var commands = Array<EntriesCommand>()

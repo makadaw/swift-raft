@@ -25,10 +25,10 @@ final class FileLogTests: XCTestCase {
 
     func testMetadataRead() throws {
         var log = try FileLog<String>(root: location)
-        log.metadata.termId = 2
+        log.metadata.termID = 2
 
         // Init second log
         log = try FileLog<String>(root: location)
-        XCTAssertEqual(log.metadata.termId, 2)
+        XCTAssertEqual(log.metadata.termID, 2)
     }
 }

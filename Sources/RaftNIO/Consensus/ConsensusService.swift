@@ -92,7 +92,7 @@ class ConsensusService<ApplicationLog> where ApplicationLog: Log {
             print("Configuration \(entity)")
         }
         self.logger.debug("The log contains indexes \(log.logStartIndex) through \(log.logLastIndex)")
-        self.term = Term(myself: config.myself.id, id: log.metadata.termId ?? 0)
+        self.term = Term(myself: config.myself.id, id: log.metadata.termID ?? 0)
     }
 
     func onStart() {
@@ -125,7 +125,7 @@ extension ConsensusService: Raft_RaftProvider {
         }
 
         let (granted, currentTermId) = lock.withLock { () -> (Bool, Term.ID) in
-            let lastLogTerm = self.log.metadata.termId ?? 0
+            let lastLogTerm = self.log.metadata.termID ?? 0
             // If the caller has a less complete log, we can't give it our vote.
             let isLogOk = request.lastLogTerm > lastLogTerm
                         || (request.lastLogTerm == lastLogTerm
@@ -173,8 +173,8 @@ extension ConsensusService: Raft_RaftProvider {
                 }
                 return (true, self.term)
             }
-            if self.term.leader == nil {
-                self.term.leader = request.leaderID
+            if self.term.leaderID == nil {
+                self.term.leaderID = request.leaderID
             }
             return (false, self.term)
         }
@@ -198,7 +198,7 @@ extension ConsensusService: Raft_RaftProvider {
 
         logger.debug("Receive message", metadata: [
             "message/term": "\(term.id)",
-            "message/leader": "\(term.leader ?? 0)"
+            "message/leader": "\(term.leaderID ?? 0)"
         ])
         return context.eventLoop.makeSucceededFuture(response)
     }
@@ -280,7 +280,7 @@ extension ConsensusService {
                 if !isPreVote {
                     self.term = next
                 }
-                return (next.id, self.log.logLastIndex, self.log.metadata.termId ?? 0)
+                return (next.id, self.log.logLastIndex, self.log.metadata.termID ?? 0)
             }
             let tallyVotes = self.peers.quorumSize
             let grantedVotes: NIOAtomic<UInt> = NIOAtomic.makeAtomic(value: 1) // We already votes for ourself

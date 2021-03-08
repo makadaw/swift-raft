@@ -104,7 +104,7 @@ class LogMetadataFileStorage {
 
     func save(metadata: LogMetadata) throws {
         let message = Raft_LogMetadata.with {
-            if let termId = metadata.termId {
+            if let termId = metadata.termID {
                 $0.term = termId
             }
             if let voteFor = metadata.voteFor {
@@ -147,7 +147,7 @@ class LogMetadataFileStorage {
                     throw Error.failedToParseMetadata
                 }
 
-                return LogMetadata(termId: message.hasTerm ? message.term : nil,
+                return LogMetadata(termID: message.hasTerm ? message.term : nil,
                                    voteFor: message.hasVoteFor ? message.voteFor : nil)
             }
         } catch let error as Errno {

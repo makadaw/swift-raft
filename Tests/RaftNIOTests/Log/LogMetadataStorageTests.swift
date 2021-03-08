@@ -21,7 +21,7 @@ final class LogMetadataStorageTests: XCTestCase {
 
     func testWrite() throws {
         var metadata = LogMetadata()
-        metadata.termId = 2
+        metadata.termID = 2
         metadata.voteFor = 3
 
         let storage = LogMetadataFileStorage(filePath: metadataTmp)

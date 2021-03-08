@@ -20,23 +20,23 @@ public struct Term {
     public private(set) var votedFor: NodeID?
 
     /// Current term leader
-    public var leader: NodeID?
+    public var leaderID: NodeID?
 
     public init(myself: NodeID, id: ID = 0) {
-        self.init(myself: myself, id: id, votedFor: nil, leader: nil)
+        self.init(myself: myself, id: id, votedFor: nil, leaderID: nil)
     }
 
-    init(myself: NodeID, id: ID, votedFor: NodeID?, leader: NodeID? = nil) {
+    init(myself: NodeID, id: ID, votedFor: NodeID?, leaderID: NodeID? = nil) {
         self.myself = myself
         self.id = id
         self.votedFor = votedFor
-        self.leader = leader
+        self.leaderID = leaderID
     }
 
     /// Return a next term and vote for myself. In this case we lost a leader
     /// - Returns: returns a next term where node already voted for itself
     public func nextTerm() -> Term {
-        Term(myself: myself, id: id + 1, votedFor: myself, leader: nil)
+        Term(myself: myself, id: id + 1, votedFor: myself, leaderID: nil)
     }
 
     /// This method update term if new term is higher then current. This methods should be called if we get AppendMessage
@@ -72,7 +72,7 @@ public struct Term {
     mutating private func updateTerm(newTerm: ID, from: NodeID? = nil) {
         id = newTerm
         votedFor = from
-        leader = nil
+        leaderID = nil
     }
 }
 
