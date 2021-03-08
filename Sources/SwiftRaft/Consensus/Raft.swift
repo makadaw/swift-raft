@@ -181,6 +181,14 @@ extension Raft {
             /// Term of candidate’s last log entry
             let lastLogTerm: UInt64
 
+            public init(type: VoteType, termID: Term.ID, candidateID: NodeID, lastLogIndex: UInt64, lastLogTerm: UInt64) {
+                self.type = type
+                self.termID = termID
+                self.candidateID = candidateID
+                self.lastLogIndex = lastLogIndex
+                self.lastLogTerm = lastLogTerm
+            }
+           
         }
 
         public struct Response: ConcurrentValue {
@@ -192,6 +200,12 @@ extension Raft {
 
             /// True means candidate received vote
             let voteGranted: Bool
+            
+            public init(type: VoteType, termID: Term.ID, voteGranted: Bool) {
+                self.type = type
+                self.termID = termID
+                self.voteGranted = voteGranted
+            }
         }
     }
 
@@ -274,7 +288,7 @@ extension Raft {
             
             public let commands: [EntriesCommand]
 
-            public init(termID: Term.ID, success: Bool, commands: [EntriesCommand]) {
+            public init(termID: Term.ID, success: Bool, commands: [EntriesCommand] = []) {
                 self.termID = termID
                 self.success = success
                 self.commands = commands
