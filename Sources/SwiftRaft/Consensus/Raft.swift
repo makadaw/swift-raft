@@ -22,7 +22,7 @@ public actor Raft {
     /// Latest term server has seen, increases monotonically
     var term: Term
 
-    /// Current state. Should not changed directly, use `_tryMoveTo(nextState:)` method
+    /// Current state. Should not be changed directly, use `_tryMoveTo(nextState:)` method
     var state: State
 
     /// Application log
