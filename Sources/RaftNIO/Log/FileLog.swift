@@ -78,7 +78,7 @@ struct FileLog<T: LogData>: Log {
     }
 }
 
-//MARK: Metadata
+// MARK: Metadata
 
 /// Logs metadata file manager. Provide methods to read/write into stable storage. Storage is sync and blocking
 /// Use protobuf model for storage on the disk
@@ -138,7 +138,7 @@ class LogMetadataFileStorage {
 
                 // TODO Read any file size
                 // Read file into a data buffer
-                let data = try Array<UInt8>.init(unsafeUninitializedCapacity: 20) { (buf, count) in
+                let data = try [UInt8].init(unsafeUninitializedCapacity: 20) { (buf, count) in
                     count = try descriptor.read(into: UnsafeMutableRawBufferPointer(buf))
                 }
 

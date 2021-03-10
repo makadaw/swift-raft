@@ -21,6 +21,7 @@ let package = Package(
         .package(url: "https://github.com/grpc/grpc-swift", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "1.0.0-alpha.6"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.2"),
+        .package(url: "https://github.com/Realm/SwiftLint", from: "0.43.0"),
     ],
     targets: [
         .target(

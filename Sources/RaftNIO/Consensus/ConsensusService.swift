@@ -204,7 +204,7 @@ extension ConsensusService: Raft_RaftProvider {
     }
 }
 
-//MARK: Election
+// MARK: Election
 extension ConsensusService {
 
     enum ElectionError: Error {
@@ -287,7 +287,7 @@ extension ConsensusService {
 
             self.logger.debug("Starting a \(isPreVote ? "pre " : "")campign", metadata: [
                 "vote/term": "\(termId)",
-                "vote/type": isPreVote ? "pre" : "real",
+                "vote/type": isPreVote ? "pre" : "real"
             ])
 
             return EventLoopFuture.andAllComplete(self.peers.map { peer -> EventLoopFuture<Bool> in
@@ -316,7 +316,7 @@ extension ConsensusService {
     }
 }
 
-//MARK: Leader
+// MARK: Leader
 
 extension ConsensusService {
 

@@ -14,9 +14,9 @@ extension FilePath {
 
     /// Trivial implementation of mktemp
     static func mktemp(prefix: String? = nil,
-                              suffix: String? = nil,
-                              createDirectory: Bool = false,
-                              destination: FilePath? = nil) throws -> FilePath {
+                       suffix: String? = nil,
+                       createDirectory: Bool = false,
+                       destination: FilePath? = nil) throws -> FilePath {
         // Get default tmp folder of the system
         let tempDirectory = destination ?? Self.temporaryDirectory
 

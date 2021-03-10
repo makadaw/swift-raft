@@ -53,7 +53,7 @@ struct MemoryLog<T: LogData>: Log {
     }
 
     mutating func truncatePrefix(_ firstIndex: UInt) {
-        if (firstIndex > startIndex) {
+        if firstIndex > startIndex {
             // remove log entries in range startIndex..<firstIndex
             let end = storage.index(storage.startIndex,
                                     offsetBy: Swift.min(Int(firstIndex - startIndex), storage.count))

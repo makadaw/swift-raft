@@ -41,7 +41,7 @@ public extension LogElement {
 
     var sizeBytes: Int {
         switch self {
-        case .configuration(_, _):
+        case .configuration:
             return 0
         case let .data(_, _, data):
             return data.size
@@ -50,7 +50,7 @@ public extension LogElement {
 
     var content: T? {
         switch self {
-        case .configuration(_, _):
+        case .configuration:
             return nil
         case let .data(_, _, content):
             return content

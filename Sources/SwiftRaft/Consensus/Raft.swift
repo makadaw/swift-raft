@@ -51,7 +51,7 @@ public actor Raft<ApplicationLog: Log> {
     }
 }
 
-//MARK: Election
+// MARK: Election
 extension Raft {
 
     /// Commands related to changes in election process
@@ -128,6 +128,7 @@ extension Raft {
         let peers = self.peers
 
         // TODO Handle errors correctly
+        // swiftlint:disable:next force_try
         let result = try! await Task.withGroup(resultType: Bool.self, returning: Bool.self) { group in
 
             // We should stop election at the moment when we got quorum
@@ -187,7 +188,7 @@ extension Raft {
 
 /// Vote request message. Use for both pre and real vote
 public struct RequestVote {
-    
+
     public enum VoteType: ConcurrentValue {
         case preVote
         case vote
@@ -216,7 +217,7 @@ public struct RequestVote {
             self.lastLogIndex = lastLogIndex
             self.lastLogTerm = lastLogTerm
         }
-       
+
     }
 
     public struct Response: ConcurrentValue {
@@ -228,7 +229,7 @@ public struct RequestVote {
 
         /// True means candidate received vote
         let voteGranted: Bool
-        
+
         public init(type: VoteType, termID: Term.ID, voteGranted: Bool) {
             self.type = type
             self.termID = termID
@@ -244,12 +245,12 @@ extension Raft {
         /// For non leader state reset an election timer
         case resetElectionTimer
     }
-    
+
     public struct AppendResponse: ConcurrentValue {
         let response: AppendEntries.Response
-        
+
         let commands: [EntriesCommand]
-        
+
         init(_ response: AppendEntries.Response, commands: [EntriesCommand]) {
             self.response = response
             self.commands = commands
@@ -271,7 +272,7 @@ extension Raft {
             "message/leader": "\(request.leaderID)"
         ])
 
-        var commands = Array<EntriesCommand>()
+        var commands = [EntriesCommand]()
         let isIAmAFollower = _tryMoveTo(nextState: .follower)
         let isLogOk = true
         // 2. Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (§5.3)
@@ -286,7 +287,7 @@ extension Raft {
         }
         return AppendResponse(.init(termID: term.id, success: isIAmAFollower && isLogOk), commands: commands)
     }
-    
+
     private func rejectAppendEntry(leader: NodeID, higherTermID termID: Term.ID) -> AppendResponse {
         do {
             try self.term.tryToUpdateTerm(newTerm: termID, from: leader)
@@ -312,7 +313,7 @@ public struct AppendEntries {
 
     public struct Request<T: LogData>: ConcurrentValue {
         public typealias Element = LogElement<T>
-        
+
         /// Current leader term id. Followers use them to validate correctness
         public let termID: Term.ID
 

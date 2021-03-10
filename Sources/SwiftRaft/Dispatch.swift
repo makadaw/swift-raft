@@ -4,6 +4,7 @@
 
 import enum Dispatch.DispatchTimeInterval
 
+// swiftlint:disable identifier_name
 public extension DispatchTimeInterval {
 
     /// Convert time interval into nanoseconds. Use it inside for comprising and most of the implementation will need it also

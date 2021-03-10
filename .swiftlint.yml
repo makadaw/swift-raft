@@ -1,0 +1,31 @@
+# By default, SwiftLint uses a set of sensible default rules you can adjust:
+disabled_rules: # rule identifiers turned on by default to exclude from running
+  - todo
+  - switch_case_alignment
+
+included: # paths to include during linting. `--path` is ignored if present.
+  - Sources
+excluded: # paths to ignore during linting. Takes precedence over `included`.
+  - Sources/RaftNIO/Proto/raft.pb.swift
+  - Sources/RaftNIO/Proto/raft.grpc.swift
+  - Sources/local-cluster/Proto/example.pb.swift
+  - Sources/*/*.pb.swift
+
+
+# configurable rules can be customized from this configuration file
+identifier_name:
+  # min_length: # only min_length
+  #   error: 4 # only error
+  excluded: # excluded via string array
+    - id
+    - to
+type_name:
+  excluded:
+    - ID
+vertical_whitespace:
+  max_empty_lines: 2
+line_length:
+  warning: 160
+nesting:
+  type_level: 5
+

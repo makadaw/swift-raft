@@ -71,7 +71,7 @@ class Peer {
         let response = client.appendEntries(
             request,
             callOptions: CallOptions(timeLimit: .timeout(.nanoseconds(rpcConfig.appendMessageTimeout.nanoseconds))))
-        response.response.whenSuccess { message in
+        response.response.whenSuccess { _ in
             // TODO do a check here
             promise.succeed(true)
         }
