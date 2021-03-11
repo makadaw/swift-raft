@@ -7,7 +7,7 @@ import XCTest
 
 final class AppendMessageTests: XCTestCase {
 
-    func heartBeatRequest(termID: Term.ID, leaderID: NodeID) -> Raft.AppendEntries.Request<String> {
+    func heartBeatRequest(termID: Term.ID, leaderID: NodeID) -> AppendEntries.Request<String> {
         .init(termID: termID, leaderID: leaderID, prevLogIndex: 0, prevLogTerm: 0, leaderCommit: 0, entries: [])
     }
 
@@ -18,8 +18,8 @@ final class AppendMessageTests: XCTestCase {
             let response = await raft.onAppendEntries(self.heartBeatRequest(termID: 2, leaderID: 2))
             XCTAssertEqual(response.commands.count, 1)
             XCTAssertEqual(response.commands.first, .resetElectionTimer)
-            XCTAssertEqual(response.termID, 2, "On getting message with higher term we set this term as current")
-            XCTAssertEqual(response.success, false)
+            XCTAssertEqual(response.response.termID, 2, "On getting message with higher term we set this term as current")
+            XCTAssertEqual(response.response.success, false)
         }
     }
 
@@ -30,8 +30,8 @@ final class AppendMessageTests: XCTestCase {
             _ = await raft.onVoteRequest(.init(type: .vote, termID: 2, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
             let response = await raft.onAppendEntries(self.heartBeatRequest(termID: 2, leaderID: 2))
             XCTAssertEqual(response.commands.first, .resetElectionTimer)
-            XCTAssertEqual(response.termID, 2)
-            XCTAssertEqual(response.success, true)
+            XCTAssertEqual(response.response.termID, 2)
+            XCTAssertEqual(response.response.success, true)
         }
     }
 }

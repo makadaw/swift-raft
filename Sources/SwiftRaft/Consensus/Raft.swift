@@ -6,7 +6,7 @@ import struct Dispatch.DispatchTime
 import enum Dispatch.DispatchTimeInterval
 import Logging
 
-public actor Raft {
+public actor Raft<ApplicationLog: Log> {
     let config: Configuration
     var logger: Logger {
         config.logger
@@ -26,12 +26,12 @@ public actor Raft {
     var state: State
 
     /// Application log
-    var log: BaseLog
+    var log: ApplicationLog
 
-    init<ApplicationLog>(config: Configuration, peers: [Peer], log: ApplicationLog) where ApplicationLog: Log {
+    init(config: Configuration, peers: [Peer], log: ApplicationLog) {
         self.config = config
         self.peers = peers
-        self.log = AnyLog(log: log)
+        self.log = log
 
         self.state = .follower
 
@@ -84,11 +84,6 @@ extension Raft {
         return .scheduleNextTimer(delay: config.protocol.nextElectionTimeout)
     }
 
-    public enum VoteType: ConcurrentValue {
-        case preVote
-        case vote
-    }
-
     /// Try to run a pre vote campaign
     public func startPreVote() async -> ElectionCommand {
         let term = self.term
@@ -116,7 +111,7 @@ extension Raft {
     }
 
     /// Node is ready to start new vote
-    func startVote(type: VoteType) async -> Bool {
+    func startVote(type: RequestVote.VoteType) async -> Bool {
         let term = self.term.nextTerm()
         if case .vote = type {
             // Set new term if this is a real vote
@@ -162,53 +157,6 @@ extension Raft {
         return result
     }
 
-    /// Vote request message. Use for both pre and real vote
-    public struct RequestVote {
-
-        public struct Request: ConcurrentValue {
-            /// Vote type `vote` or `PreVote`
-            let type: VoteType
-
-            /// Candidate’s term
-            let termID: Term.ID
-
-            /// Candidate requesting vote
-            let candidateID: NodeID
-
-            /// Index of candidate’s last log entry
-            let lastLogIndex: UInt64
-
-            /// Term of candidate’s last log entry
-            let lastLogTerm: UInt64
-
-            public init(type: VoteType, termID: Term.ID, candidateID: NodeID, lastLogIndex: UInt64, lastLogTerm: UInt64) {
-                self.type = type
-                self.termID = termID
-                self.candidateID = candidateID
-                self.lastLogIndex = lastLogIndex
-                self.lastLogTerm = lastLogTerm
-            }
-           
-        }
-
-        public struct Response: ConcurrentValue {
-            /// Vote type `vote` or `PreVote`, should be the the same as in request
-            let type: VoteType
-
-            /// Current term of the node, for candidate to update itself
-            let termID: Term.ID
-
-            /// True means candidate received vote
-            let voteGranted: Bool
-            
-            public init(type: VoteType, termID: Term.ID, voteGranted: Bool) {
-                self.type = type
-                self.termID = termID
-                self.voteGranted = voteGranted
-            }
-        }
-    }
-
     /// Process vote and pre vote requests. Should be invoked by a host
     ///
     /// 1. Reply false if term `<` currentTerm (§5.1)
@@ -237,72 +185,79 @@ extension Raft {
 
 }
 
-// MARK: Entries
-extension Raft {
+/// Vote request message. Use for both pre and real vote
+public struct RequestVote {
+    
+    public enum VoteType: ConcurrentValue {
+        case preVote
+        case vote
+    }
 
-    public struct AppendEntries {
+    public struct Request: ConcurrentValue {
+        /// Vote type `vote` or `PreVote`
+        let type: VoteType
 
-        public struct Request<T: LogData>: ConcurrentValue {
-            public typealias Element = LogElement<T>
-            
-            /// Current leader term id. Followers use them to validate correctness
-            public let termID: Term.ID
+        /// Candidate’s term
+        let termID: Term.ID
 
-            /// Leader id in the cluster
-            public let leaderID: NodeID
+        /// Candidate requesting vote
+        let candidateID: NodeID
 
-            /// Index of log entry immediately preceding new ones
-            public let prevLogIndex: UInt64
+        /// Index of candidate’s last log entry
+        let lastLogIndex: UInt64
 
-            /// Term id of prevLogIndex entry
-            public let prevLogTerm: UInt64
+        /// Term of candidate’s last log entry
+        let lastLogTerm: UInt64
 
-            /// Leader’s commit index
-            public let leaderCommit: UInt64
-
-            // TODO Make sure compiler can check that generic argument is `ConcurrentValue`
-            /// Log entries to store (empty for heartbeat; may send more than one for efficiency)
-//            public let entries: [Element]
-
-            public init(termID: Term.ID,
-                        leaderID: NodeID,
-                        prevLogIndex: UInt64,
-                        prevLogTerm: UInt64,
-                        leaderCommit: UInt64,
-                        entries: [Element]) {
-                self.termID = termID
-                self.leaderID = leaderID
-                self.prevLogIndex = prevLogIndex
-                self.prevLogTerm = prevLogTerm
-                self.leaderCommit = leaderCommit
-//                self.entries = entries
-            }
+        public init(type: VoteType, termID: Term.ID, candidateID: NodeID, lastLogIndex: UInt64, lastLogTerm: UInt64) {
+            self.type = type
+            self.termID = termID
+            self.candidateID = candidateID
+            self.lastLogIndex = lastLogIndex
+            self.lastLogTerm = lastLogTerm
         }
+       
+    }
 
-        public struct Response: ConcurrentValue {
-            /// Current node term, for leader to update itself
-            public let termID: Term.ID
+    public struct Response: ConcurrentValue {
+        /// Vote type `vote` or `PreVote`, should be the the same as in request
+        let type: VoteType
 
-            /// True if a follower accepted the message
-            public let success: Bool
-            
-            public let commands: [EntriesCommand]
+        /// Current term of the node, for candidate to update itself
+        let termID: Term.ID
 
-            public init(termID: Term.ID, success: Bool, commands: [EntriesCommand] = []) {
-                self.termID = termID
-                self.success = success
-                self.commands = commands
-            }
+        /// True means candidate received vote
+        let voteGranted: Bool
+        
+        public init(type: VoteType, termID: Term.ID, voteGranted: Bool) {
+            self.type = type
+            self.termID = termID
+            self.voteGranted = voteGranted
         }
     }
+}
+
+// MARK: Entries
+extension Raft {
 
     public enum EntriesCommand: ConcurrentValue, Equatable {
         /// For non leader state reset an election timer
         case resetElectionTimer
     }
+    
+    public struct AppendResponse: ConcurrentValue {
+        let response: AppendEntries.Response
+        
+        let commands: [EntriesCommand]
+        
+        init(_ response: AppendEntries.Response, commands: [EntriesCommand]) {
+            self.response = response
+            self.commands = commands
+        }
+    }
 
     /// Process Entry append
-    func onAppendEntries<T: LogData>(_ request: AppendEntries.Request<T>) async -> AppendEntries.Response {
+    func onAppendEntries<T>(_ request: AppendEntries.Request<T>) async -> AppendResponse where T == ApplicationLog.Data {
         // 1. Reply false if term `<` currentTerm (§5.1)
         guard request.termID <= self.term.id else {
             return rejectAppendEntry(leader: request.leaderID, higherTermID: request.termID)
@@ -329,10 +284,10 @@ extension Raft {
             // Reset election timer if node is not a leader
             commands.append(.resetElectionTimer)
         }
-        return AppendEntries.Response(termID: term.id, success: isIAmAFollower && isLogOk, commands: commands)
+        return AppendResponse(.init(termID: term.id, success: isIAmAFollower && isLogOk), commands: commands)
     }
     
-    private func rejectAppendEntry(leader: NodeID, higherTermID termID: Term.ID) -> AppendEntries.Response {
+    private func rejectAppendEntry(leader: NodeID, higherTermID termID: Term.ID) -> AppendResponse {
         do {
             try self.term.tryToUpdateTerm(newTerm: termID, from: leader)
             if !_tryMoveTo(nextState: .follower) {
@@ -349,6 +304,59 @@ extension Raft {
                                     "error": "\(error)"])
         }
         // Response with reject and reset election timer, as we not a leader anymore
-        return AppendEntries.Response(termID: term.id, success: false, commands: [.resetElectionTimer])
+        return AppendResponse(.init(termID: term.id, success: false), commands: [.resetElectionTimer])
+    }
+}
+
+public struct AppendEntries {
+
+    public struct Request<T: LogData>: ConcurrentValue {
+        public typealias Element = LogElement<T>
+        
+        /// Current leader term id. Followers use them to validate correctness
+        public let termID: Term.ID
+
+        /// Leader id in the cluster
+        public let leaderID: NodeID
+
+        /// Index of log entry immediately preceding new ones
+        public let prevLogIndex: UInt64
+
+        /// Term id of prevLogIndex entry
+        public let prevLogTerm: UInt64
+
+        /// Leader’s commit index
+        public let leaderCommit: UInt64
+
+        // TODO Make sure compiler can check that generic argument is `ConcurrentValue`
+        /// Log entries to store (empty for heartbeat; may send more than one for efficiency)
+//        public let entries: [Element]
+
+        public init(termID: Term.ID,
+                    leaderID: NodeID,
+                    prevLogIndex: UInt64,
+                    prevLogTerm: UInt64,
+                    leaderCommit: UInt64,
+                    entries: [Element]) {
+            self.termID = termID
+            self.leaderID = leaderID
+            self.prevLogIndex = prevLogIndex
+            self.prevLogTerm = prevLogTerm
+            self.leaderCommit = leaderCommit
+//            self.entries = entries
+        }
+    }
+
+    public struct Response: ConcurrentValue {
+        /// Current node term, for leader to update itself
+        public let termID: Term.ID
+
+        /// True if a follower accepted the message
+        public let success: Bool
+
+        public init(termID: Term.ID, success: Bool) {
+            self.termID = termID
+            self.success = success
+        }
     }
 }

@@ -16,7 +16,7 @@ extension Raft {
     }
 }
 
-func buildTestInstance(log: ArrayLog<String>? = nil) -> Raft {
+func buildTestInstance(log: ArrayLog<String>? = nil) -> Raft<ArrayLog<String>> {
     Raft(config: Configuration(id: 1), peers: [], log: log ?? ArrayLog<String>())
 }
 
