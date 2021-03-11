@@ -5,33 +5,35 @@
 import SwiftRaft
 import NIO
 
-struct MemoryLog<T: LogData>: Log {
-    typealias Data = T
-    typealias Iterator = CircularBuffer<LogElement<Data>>.Iterator
+public struct MemoryLog<T: LogData>: Log {
+    public typealias Data = T
+    public typealias Iterator = CircularBuffer<LogElement<Data>>.Iterator
 
-    __consuming func makeIterator() -> Iterator {
+    public init() {}
+
+    public __consuming func makeIterator() -> Iterator {
         return storage.makeIterator()
     }
 
     var startIndex: UInt = 1
     var endIndex: UInt = 1
 
-    var logStartIndex: UInt {
+    public var logStartIndex: UInt {
         startIndex
     }
 
-    var logLastIndex: UInt {
+    public var logLastIndex: UInt {
         Swift.max(0, startIndex + UInt(storage.count) - 1)
     }
 
-    var count: Int {
+    public var count: Int {
         storage.count
     }
 
     var storage: CircularBuffer<LogElement<Data>> = .init()
 
     /// Runtime safe get method
-    func entry(at position: UInt) throws -> LogElement<Data> {
+    public func entry(at position: UInt) throws -> LogElement<Data> {
         let real = _position(offsetBy: position)
         guard !(real < 0 || real >= storage.count) else {
             throw LogError.outOfRange
@@ -44,7 +46,7 @@ struct MemoryLog<T: LogData>: Log {
         Int(position) - Int(startIndex)
     }
 
-    mutating func append(_ entries: [LogElement<Data>]) -> ClosedRange<UInt> {
+    public mutating func append(_ entries: [LogElement<Data>]) -> ClosedRange<UInt> {
         let firstIndex = startIndex + UInt(storage.count)
         let lastIndex = firstIndex + UInt(entries.count)
         storage.append(contentsOf: entries)
@@ -52,7 +54,7 @@ struct MemoryLog<T: LogData>: Log {
         return ClosedRange(firstIndex..<lastIndex)
     }
 
-    mutating func truncatePrefix(_ firstIndex: UInt) {
+    public mutating func truncatePrefix(_ firstIndex: UInt) {
         if firstIndex > startIndex {
             // remove log entries in range startIndex..<firstIndex
             let end = storage.index(storage.startIndex,
@@ -62,7 +64,7 @@ struct MemoryLog<T: LogData>: Log {
         }
     }
 
-    mutating func truncateSuffix(_ lastIndex: UInt) {
+    public mutating func truncateSuffix(_ lastIndex: UInt) {
         if lastIndex < startIndex {
             storage.removeAll()
         } else if Int(lastIndex) < Int(startIndex) - 1 + storage.count {
@@ -71,5 +73,5 @@ struct MemoryLog<T: LogData>: Log {
     }
 
     /// Memory log do not write metadata to any storage
-    var metadata = LogMetadata()
+    public var metadata = LogMetadata()
 }
