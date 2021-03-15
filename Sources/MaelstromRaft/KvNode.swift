@@ -2,22 +2,25 @@
 // Copyright © 2021 makadaw
 
 
-import NIO
 import SwiftRaft
+import NIO
 import RaftNIO
 import Logging
 
-public actor RaftProvider: MessageProvider {
+/// Key value node
+final public actor KvNode: MessageProvider {
 
+    private(set) var configuration: Configuration
     var raft: Raft<MemoryLog<String>>?
 
-    let logger: Logger
-
-    public init(logger: Logger) {
-        self.logger = logger
+    private var logger: Logger {
+        configuration.logger
     }
 
-    // Single node storage
+    public init(configuration: Configuration) {
+        self.configuration = configuration
+    }
+
     var storage: [Int: Int] = [:]
 
     public func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message {
@@ -31,8 +34,9 @@ public actor RaftProvider: MessageProvider {
                 guard peers.count == nodeIds.count - 1 else {
                     fatalError("Can't cast node ids to Int")
                 }
-
-                self.raft = Raft(config: Configuration(id: intNodeID, host: "localhost", port: 9000 + Int(intNodeID)),
+                // Update configuration for self node based on init message
+                configuration.myself = .init(id: intNodeID, host: "localhost", port: 9000 + Int(intNodeID))
+                self.raft = Raft(config: configuration,
                                  peers: [],
                                  log: MemoryLog())
                 return .initOk
@@ -57,8 +61,10 @@ public actor RaftProvider: MessageProvider {
                 }
                 throw RPCPacket.Error.preconditionFailed
 
+
             default:
                 throw RPCPacket.Error.notSupported
         }
     }
+
 }

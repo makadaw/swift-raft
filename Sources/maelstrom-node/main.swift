@@ -3,6 +3,7 @@
 
 
 import MaelstromRaft
+import SwiftRaft
 import NIO
 import Logging
 import Lifecycle
@@ -19,11 +20,13 @@ class App {
         let lifecycle = ServiceLifecycle(configuration: .init(logger: logger))
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 
-        let rpc = MaelstromRPC(group: group, logger: logger, messageProvider: RaftProvider(logger: logger))
+        var config = Configuration(id: 0)
+        config.logger = logger
+        let service = MaelstromRPC(group: group, logger: logger, messageProvider: KvNode(configuration: config))
         lifecycle.register(label: "maelstrom", start: .sync {
-            _ = try rpc.start()
+            _ = try service.start()
         }, shutdown: .sync {
-            rpc.stop()
+            service.stop()
         })
 
         try lifecycle.startAndWait()
