@@ -7,9 +7,9 @@ import Logging
 import NIO
 import NIOFoundationCompat
 
-public struct RPCPacket {
+public struct RPCPacket: ConcurrentValue {
     // Simple error representation
-    public enum Error: Int, Swift.Error, Codable {
+    public enum Error: Int, Swift.Error, Codable, ConcurrentValue {
 
         // Indicates that the requested operation could not be completed within a timeout.
         case timeout = 0
@@ -58,7 +58,7 @@ public struct RPCPacket {
         }
     }
 
-    public enum Message: Equatable {
+    public enum Message: Equatable, ConcurrentValue {
         case error(Error)
         case `init`(nodeID: String, nodeIDs: [String])
         case initOk
@@ -110,7 +110,7 @@ public struct RPCPacket {
 
 extension RPCPacket: Codable {
 
-    struct ParseMessage: Codable {
+    struct ParseMessage: Codable, ConcurrentValue {
         let body: Message
         let msgId: Int?
         let inReplyTo: Int?

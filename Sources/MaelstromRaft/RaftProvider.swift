@@ -7,7 +7,7 @@ import SwiftRaft
 import RaftNIO
 import Logging
 
-public class RaftProvider: MessageProvider {
+public actor RaftProvider: MessageProvider {
 
     var raft: Raft<MemoryLog<String>>?
 
@@ -20,7 +20,7 @@ public class RaftProvider: MessageProvider {
     // Single node storage
     var storage: [Int: Int] = [:]
 
-    public func onMessage(_ message: RPCPacket.Message, context: CallHandlerContext) -> EventLoopFuture<RPCPacket.Message> {
+    public func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message {
         switch message {
             case let .`init`(nodeId, nodeIds):
                 // Start a raft service
@@ -35,30 +35,30 @@ public class RaftProvider: MessageProvider {
                 self.raft = Raft(config: Configuration(id: intNodeID, host: "localhost", port: 9000 + Int(intNodeID)),
                                  peers: [],
                                  log: MemoryLog())
-                return context.eventLoop.makeSucceededFuture(.initOk)
+                return .initOk
 
             case let .read(key: key):
                 logger.trace("Key: \(key)")
                 if let value = storage[key] {
-                    return context.eventLoop.makeSucceededFuture(.readOk(value: value))
+                    return .readOk(value: value)
                 }
-                return context.eventLoop.makeFailedFuture(RPCPacket.Error.keyDoesNotExist)
+                throw RPCPacket.Error.keyDoesNotExist
 
             case let .write(key: key, value: value):
                 logger.trace("Write \(value) for key \(key)")
                 storage[key] = value
-                return context.eventLoop.makeSucceededFuture(.writeOk)
+                return .writeOk
 
             case let .cas(key: key, from: from, to: to):
                 logger.trace("Write \(to) from \(from) key \(key)")
                 if storage[key] == from {
                     storage[key] = to
-                    return context.eventLoop.makeSucceededFuture(.casOk)
+                    return .casOk
                 }
-                return context.eventLoop.makeFailedFuture(RPCPacket.Error.preconditionFailed)
+                throw RPCPacket.Error.preconditionFailed
 
             default:
-                return context.eventLoop.makeFailedFuture(RPCPacket.Error.notSupported)
+                throw RPCPacket.Error.notSupported
         }
     }
 }

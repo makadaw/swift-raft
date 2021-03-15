@@ -10,18 +10,12 @@ import NIOFoundationCompat
 
 
 /// Process messages from the network
-public protocol MessageProvider {
-
-    func onMessage(_ message: RPCPacket.Message, context: CallHandlerContext) -> EventLoopFuture<RPCPacket.Message>
+public protocol MessageProvider: Actor {
+    func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message
 }
 
-public struct CallHandlerContext {
-    var logger: Logger
-
-    var eventLoop: EventLoop
-}
-
-class MessageHandler: ChannelDuplexHandler {
+/// Message handler is responsible for connecting NIO runtime with actors handlers.
+class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
     typealias InboundIn = RPCPacket
     typealias OutboundIn = RPCPacket
     typealias OutboundOut = RPCPacket
@@ -42,34 +36,38 @@ class MessageHandler: ChannelDuplexHandler {
         let request = unwrapInboundIn(data)
 
         logger.debug("Get RPC request \(request)")
-        let future = messageProvider.onMessage(request.body,
-                                               context: CallHandlerContext(logger: logger,
-                                                                           eventLoop: context.eventLoop))
         if nodeID == nil, request.isInit {
             self.nodeID = request.initNodeID
         }
-        future.whenSuccess { message in
-            guard let nodeID = self.nodeID else {
-                preconditionFailure("Didn't get init message")
-            }
-            let response = RPCPacket(src: nodeID,
+
+        // Run a coroutine to get a response and write into the context
+        Task.runDetached {
+            let response: RPCPacket
+            do {
+                let message = try await self.messageProvider.onMessage(request.body)
+                guard let nodeID = self.nodeID else {
+                    preconditionFailure("Didn't get init message")
+                }
+                response = RPCPacket(src: nodeID,
                                      dest: request.src,
                                      id: request.id,
                                      body: message,
                                      msgID: self.counter.next(),
                                      inReplyTo: request.msgID)
-            _ = context.writeAndFlush(self.wrapOutboundOut(response))
-        }
-        future.whenFailure { error in
-            self.logger.error("\(error)")
-            let finalError: RPCPacket.Error = error as? RPCPacket.Error ?? .undefined
-            let response = RPCPacket(src: self.nodeID ?? request.dest,
+            } catch {
+                self.logger.error("\(error)")
+                let finalError: RPCPacket.Error = error as? RPCPacket.Error ?? .undefined
+                response = RPCPacket(src: self.nodeID ?? request.dest,
                                      dest: request.src,
                                      id: request.id,
                                      body: .error(finalError),
                                      msgID: self.counter.next(),
                                      inReplyTo: request.msgID)
-            _ = context.writeAndFlush(self.wrapOutboundOut(response))
+            }
+            // Return back on the NIO event loop and write a response
+            context.eventLoop.execute {
+                _ = context.writeAndFlush(self.wrapOutboundOut(response))
+            }
         }
     }
 
@@ -81,7 +79,9 @@ extension NIOAtomic where T == Int {
     }
 }
 
+extension ChannelHandlerContext: UnsafeConcurrentValue {}
 
+///Maelstrom RPC messages service
 final public class MaelstromRPC {
 
     let logger: Logger
@@ -120,7 +120,6 @@ final public class MaelstromRPC {
             try group.syncShutdownGracefully()
         } catch {
             logger.error("Error shutting down: \(error)")
-            exit(0)
         }
         logger.info("Maelstrom stopped")
     }

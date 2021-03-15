@@ -4,20 +4,20 @@
 
 import NIO
 
-public class EchoProvider: MessageProvider {
+public actor EchoProvider: MessageProvider {
 
     public init() {}
 
-    public func onMessage(_ message: RPCPacket.Message, context: CallHandlerContext) -> EventLoopFuture<RPCPacket.Message> {
+    public func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message {
         switch message {
             case .`init`:
-                return context.eventLoop.makeSucceededFuture(.initOk)
+                return .initOk
 
-            case let .echo(payload):
-                return context.eventLoop.makeSucceededFuture(.echoOk(payload))
+            case let .echo(echo):
+                return .echoOk(echo)
 
             default:
-                return context.eventLoop.makeFailedFuture(RPCPacket.Error.notSupported)
+                throw RPCPacket.Error.notSupported
         }
     }
 }
