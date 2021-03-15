@@ -77,8 +77,8 @@ struct ArrayLog<T: LogData>: Log {
 // Use string as dummy application data
 extension String: LogData {
 
-    public init?(data: Data) {
-        self.init(data: data, encoding: .utf8)
+    public static func decode(from data: Data) -> String? {
+        return String(data: data, encoding: .utf8)
     }
 
     public var size: Int {

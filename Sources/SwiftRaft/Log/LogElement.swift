@@ -8,7 +8,7 @@ import Foundation
 /// by consumer and represent application data, not Raft types
 public protocol LogData: ConcurrentValue {
     // TODO Replace foundation Data with custom type
-    init?(data: Data)
+    static func decode(from data: Data) -> Self?
 
     /// Log element data size in bytes
     var size: Int { get }
