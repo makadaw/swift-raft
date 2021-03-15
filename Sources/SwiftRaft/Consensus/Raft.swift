@@ -28,7 +28,7 @@ public actor Raft<ApplicationLog: Log> {
     /// Application log
     var log: ApplicationLog
 
-    init(config: Configuration, peers: [Peer], log: ApplicationLog) {
+    public init(config: Configuration, peers: [Peer], log: ApplicationLog) {
         self.config = config
         self.peers = peers
         self.log = log

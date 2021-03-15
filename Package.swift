@@ -13,6 +13,9 @@ let package = Package(
         .executable(
             name: "local-cluster",
             targets: ["local-cluster"]),
+        .executable(
+            name: "maelstrom-node",
+            targets: ["maelstrom-node"]),
     ],
     dependencies: [
         // Use version from main, wait for next release.
@@ -33,6 +36,13 @@ let package = Package(
             ],
             exclude: ["Proto/example.proto", "Proto/log.proto"]),
         .target(
+            name: "maelstrom-node",
+            dependencies: [
+                "MaelstromRaft",
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Lifecycle", package: "swift-service-lifecycle"),
+            ]),
+        .target(
             name: "SwiftRaft",
             dependencies: [
                 .product(name: "SystemPackage", package: "swift-system"),
@@ -50,6 +60,16 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ],
             exclude: ["Proto/raft.proto"]),
+        .target(
+            name: "MaelstromRaft",
+            dependencies: [
+                "SwiftRaft",
+                "RaftNIO",
+                .product(name: "Logging", package: "swift-log"),
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
+            ]),
         .testTarget(
             name: "SwiftRaftTests",
             dependencies: [
@@ -59,6 +79,11 @@ let package = Package(
             name: "RaftNIOTests",
             dependencies: [
                 "RaftNIO"
+            ]),
+        .testTarget(
+            name: "MaelstromRaftTests",
+            dependencies: [
+                "MaelstromRaft"
             ]),
     ]
 )
