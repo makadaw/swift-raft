@@ -1,8 +1,8 @@
 # swift-raft
 
-Swift implementation of the [Raft protocol](https://raft.github.io/raft.pdf), 
-[more detailed research](https://github.com/ongardie/dissertation/blob/master/online-trim.pdf)
-[Visualisation of the protocol](http://thesecretlivesofdata.com/raft/)
+Swift implementation of the [Raft protocol](https://raft.github.io/raft.pdf), [more detailed paper](https://github.com/ongardie/dissertation/blob/master/online-trim.pdf)
+
+Visualisation of the [protocol](http://thesecretlivesofdata.com/raft/)
 
 ## Implementation
 
@@ -31,6 +31,28 @@ Swift implementation of the [Raft protocol](https://raft.github.io/raft.pdf),
 ## Development
 - [ ] Add Linux tests
 - [ ] Setup CI
+
+## Maelstrom tests
+
+Run Jepsen tests with [maelstrom](https://github.com/jepsen-io/maelstrom).
+```
+maelstrom test -w lin-kv --bin maelstrom-node --time-limit 10 --rate 10 --nodes 1 2 3
+```
+
+Where `maelstrom-node` is a bin. 
+And `--nodes` list of nodes in local cluster.
+
+`maelstrom-node` also can be a bash wrapper, if you want to run binary with snapshot toolchain 
+
+```
+#!/usr/bin/env bash
+
+# Add toolchain libs to the library path. Need for _Concurrency library.
+export DYLD_FALLBACK_LIBRARY_PATH=/Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2021-03-02-a.xctoolchain/usr/lib/swift/macosx
+
+# Run compiled binary
+exec .build/debug/maelstrom-node
+```
 
 ## Contribution
 
