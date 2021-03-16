@@ -11,7 +11,7 @@ import NIOFoundationCompat
 
 /// Process messages from the network
 public protocol MessageProvider: Actor {
-    func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message
+    func onMessage(_ message: Message) async throws -> Message
 }
 
 /// Message handler is responsible for connecting NIO runtime with actors handlers.
@@ -56,11 +56,11 @@ class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
                                      inReplyTo: request.msgID)
             } catch {
                 self.logger.error("\(error)")
-                let finalError: RPCPacket.Error = error as? RPCPacket.Error ?? .undefined
+                let finalError: Maelstrom.Error = error as? Maelstrom.Error ?? .undefined
                 response = RPCPacket(src: self.nodeID ?? request.dest,
                                      dest: request.src,
                                      id: request.id,
-                                     body: .error(finalError),
+                                     body: finalError,
                                      msgID: self.counter.next(),
                                      inReplyTo: request.msgID)
             }
@@ -87,11 +87,13 @@ final public class MaelstromRPC {
     let logger: Logger
     let bootstrap: NIOPipeBootstrap
     let group: EventLoopGroup
+
     var channel: Channel?
 
-    public init(group: EventLoopGroup, logger: Logger, messageProvider: MessageProvider) {
+    public init(group: EventLoopGroup, logger: Logger, messageProvider: MessageProvider, additionalMessages: [Message.Type] = []) throws {
         self.logger = logger
         self.group = group
+
         let coder = RPCPacketCoder(logger: logger)
 
         self.bootstrap = NIOPipeBootstrap(group: group)
@@ -106,6 +108,7 @@ final public class MaelstromRPC {
                     MessageHandler(messageProvider: messageProvider, logger: logger)
                 ])
             }
+        try registerSystemMessages(in: coder, additionalMessages: additionalMessages)
     }
 
     public func start() throws -> Channel {
@@ -124,4 +127,18 @@ final public class MaelstromRPC {
         logger.info("Maelstrom stopped")
     }
 
+    func registerSystemMessages(in coder: RPCPacketCoder, additionalMessages: [Message.Type]) throws {
+        // Register Maelstrom default messages
+        try coder.registerMessage(Maelstrom.Error.self)
+        try coder.registerMessage(Maelstrom.Init.self)
+        try coder.registerMessage(Maelstrom.InitOk.self)
+        try coder.registerMessage(Maelstrom.Echo.self)
+        try coder.registerMessage(Maelstrom.EchoOk.self)
+        try coder.registerMessage(Maelstrom.Read.self)
+        try coder.registerMessage(Maelstrom.ReadOk.self)
+        try coder.registerMessage(Maelstrom.Write.self)
+        try coder.registerMessage(Maelstrom.WriteOk.self)
+        try coder.registerMessage(Maelstrom.Cas.self)
+        try coder.registerMessage(Maelstrom.CasOk.self)
+    }
 }

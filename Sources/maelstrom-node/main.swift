@@ -22,7 +22,7 @@ class App {
 
         var config = Configuration(id: 0)
         config.logger = logger
-        let service = MaelstromRPC(group: group, logger: logger, messageProvider: KvNode(configuration: config))
+        let service = try MaelstromRPC(group: group, logger: logger, messageProvider: KvNode(configuration: config))
         lifecycle.register(label: "maelstrom", start: .sync {
             _ = try service.start()
         }, shutdown: .sync {

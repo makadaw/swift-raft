@@ -8,16 +8,16 @@ public actor EchoProvider: MessageProvider {
 
     public init() {}
 
-    public func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message {
+    public func onMessage(_ message: Message) async throws -> Message {
         switch message {
-            case .`init`:
-                return .initOk
+            case is Maelstrom.Init:
+                return Maelstrom.InitOk()
 
-            case let .echo(echo):
-                return .echoOk(echo)
+            case let echo as Maelstrom.Echo:
+                return Maelstrom.Echo(echo: echo.echo)
 
             default:
-                throw RPCPacket.Error.notSupported
+                throw Maelstrom.Error.notSupported
         }
     }
 }

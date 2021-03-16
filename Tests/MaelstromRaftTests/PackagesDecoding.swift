@@ -3,61 +3,67 @@
 
 
 import XCTest
+import Logging
 @testable import MaelstromRaft
 
 class PackagesDecoding: XCTestCase {
+    let logger: Logger = .init(label: "tests")
+    var coder: RPCPacketCoder {
+        RPCPacketCoder(logger: logger)
+    }
 
     func testInitMessageDecoding() throws {
         let message = """
 {"src": "c1", "dest": "n1", "id": 0, "body": {"msg_id": 1, "type": "init", "node_id": "n1", "node_ids": ["n1"]}}
 """
-        let packet = try RPCPacket.decoder.decode(RPCPacket.self, from: message)
+        let coder = self.coder
+        try coder.registerMessage(Maelstrom.Init.self)
+        let packet = try coder.decode(string: message)
         XCTAssertEqual(packet.src, "c1")
         XCTAssertEqual(packet.dest, "n1")
-        XCTAssertEqual(packet.body, .`init`(nodeID: "n1", nodeIDs: ["n1"]))
+        XCTAssertEqual(packet.body as? Maelstrom.Init, Maelstrom.Init(nodeID: "n1", nodeIDs: ["n1"]))
     }
 
     func testInitOkMessageEncoding() throws {
-        let response: RPCPacket.Message = .initOk
-        // swiftlint:disable:next force_try
-        let str = String(data: try! RPCPacket.encoder.encode(response), encoding: .utf8)
-        XCTAssertEqual(str, "{\"type\":\"init_ok\"}")
+        let response = RPCPacket(src: "n1", dest: "n2", id: 0, body: Maelstrom.InitOk())
+        let str = try coder.encodeToString(packet: response)
+        XCTAssertEqual(str, "{\"dest\":\"n2\",\"id\":0,\"body\":{\"type\":\"init_ok\"},\"src\":\"n1\"}")
     }
 
     func testEchoCoding() throws {
         let message = """
 {"dest":"n1","body":{"echo":"Please echo 106","type":"echo","msg_id":1},"src":"c2","id":2}
 """
-        let packet = try RPCPacket.decoder.decode(RPCPacket.self, from: message)
-        XCTAssertEqual(packet.body, .echo("Please echo 106"))
+        let coder = self.coder
+        try coder.registerMessage(Maelstrom.Echo.self)
+        let packet = try coder.decode(string: message)
+        XCTAssertEqual(packet.body as? Maelstrom.Echo, Maelstrom.Echo(echo: "Please echo 106"))
     }
 
     func testEchoEncoding() throws {
-        let response = RPCPacket(src: "n1", dest: "n2", id: 0, body: .echoOk("Please echo 106"))
-        let str = try RPCPacket.encoder.encodeAsString(response)
+        let response = RPCPacket(src: "n1", dest: "n2", id: 0, body: Maelstrom.EchoOk(echo: "Please echo 106"))
+        let str = try coder.encodeToString(packet: response)
         XCTAssertEqual(str, "{\"dest\":\"n2\",\"id\":0,\"body\":{\"type\":\"echo_ok\",\"echo\":\"Please echo 106\"},\"src\":\"n1\"}")
     }
 
     func testErrorEncoding() throws {
-        let response = RPCPacket(src: "n1", dest: "n2", id: 0, body: .error(.crash))
-        let str = try RPCPacket.encoder.encodeAsString(response)
+        let response = RPCPacket(src: "n1", dest: "n2", id: 0, body: Maelstrom.Error.crash)
+        let str = try coder.encodeToString(packet: response)
         XCTAssertEqual(str, "{\"dest\":\"n2\",\"id\":0,\"body\":{\"type\":\"error\",\"code\":13},\"src\":\"n1\"}")
     }
 }
 
-extension JSONDecoder {
-    func decode<T: Decodable>(_ type: T.Type, from string: String) throws -> T {
+extension RPCPacketCoder {
+    func decode(string: String) throws -> RPCPacket {
         guard let data = string.trimmingCharacters(in: .newlines).data(using: .utf8) else {
-            // Throw random error
+            // Throw random decoder error
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: ""))
         }
-        return try decode(T.self, from: data)
+        return try decode(data: data)
     }
-}
 
-extension JSONEncoder {
-    func encodeAsString<T: Encodable>(_ value: T) throws -> String {
-        guard let str = String(data: try self.encode(value), encoding: .utf8) else {
+    func encodeToString(packet: RPCPacket) throws -> String {
+        guard let str = String(data: try self.encode(packet: packet), encoding: .utf8) else {
             // Throw random error
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: ""))
         }

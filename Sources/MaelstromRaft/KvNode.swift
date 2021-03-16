@@ -7,6 +7,8 @@ import NIO
 import RaftNIO
 import Logging
 
+// swiftlint:disable:next orphaned_doc_comment
+/// Key value based node
 final public actor KvNode: MessageProvider {
 
     var configuration: Configuration
@@ -22,15 +24,15 @@ final public actor KvNode: MessageProvider {
 
     var storage: [Int: Int] = [:]
 
-    public func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message {
+    public func onMessage(_ message: Message) async throws -> Message {
         switch message {
-            case let .`init`(nodeId, nodeIds):
+            case let onInit as Maelstrom.Init:
                 // Start a raft service
-                guard let intNodeID = NodeID(nodeId) else {
+                guard let intNodeID = NodeID(onInit.nodeID) else {
                     fatalError("Can't cast node id to Int")
                 }
-                let peers = nodeIds.filter { $0 != nodeId }.compactMap { NodeID($0) }
-                guard peers.count == nodeIds.count - 1 else {
+                let peers = onInit.nodeIDs.filter { $0 != onInit.nodeID }.compactMap { NodeID($0) }
+                guard peers.count == onInit.nodeIDs.count - 1 else {
                     fatalError("Can't cast node ids to Int")
                 }
                 // Update configuration for self node based on init message
@@ -38,31 +40,31 @@ final public actor KvNode: MessageProvider {
                 self.raft = Raft(config: configuration,
                                  peers: [],
                                  log: MemoryLog())
-                return .initOk
+                return Maelstrom.InitOk()
 
-            case let .read(key: key):
-                logger.trace("Key: \(key)")
-                if let value = storage[key] {
-                    return .readOk(value: value)
+            case let read as Maelstrom.Read:
+                logger.trace("Key: \(read.key)")
+                if let value = storage[read.key] {
+                    return Maelstrom.ReadOk(value: value)
                 }
-                throw RPCPacket.Error.keyDoesNotExist
+                throw Maelstrom.Error.keyDoesNotExist
 
-            case let .write(key: key, value: value):
-                logger.trace("Write \(value) for key \(key)")
-                storage[key] = value
-                return .writeOk
+            case let write as Maelstrom.Write:
+                logger.trace("Write \(write.value) for key \(write.key)")
+                storage[write.key] = write.value
+                return Maelstrom.WriteOk()
 
-            case let .cas(key: key, from: from, to: to):
-                logger.trace("Write \(to) from \(from) key \(key)")
-                if storage[key] == from {
-                    storage[key] = to
-                    return .casOk
+            case let cas as Maelstrom.Cas:
+                logger.trace("Write \(cas.to) from \(cas.from) key \(cas.key)")
+                if storage[cas.key] == cas.from {
+                    storage[cas.key] = cas.to
+                    return Maelstrom.CasOk()
                 }
-                throw RPCPacket.Error.preconditionFailed
+                throw Maelstrom.Error.preconditionFailed
 
 
             default:
-                throw RPCPacket.Error.notSupported
+                throw Maelstrom.Error.notSupported
         }
     }
 
