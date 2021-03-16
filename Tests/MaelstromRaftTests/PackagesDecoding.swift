@@ -6,7 +6,7 @@ import XCTest
 @testable import MaelstromRaft
 
 class PackagesDecoding: XCTestCase {
-    
+
     func testInitMessageDecoding() throws {
         let message = """
 {"src": "c1", "dest": "n1", "id": 0, "body": {"msg_id": 1, "type": "init", "node_id": "n1", "node_ids": ["n1"]}}
@@ -16,9 +16,10 @@ class PackagesDecoding: XCTestCase {
         XCTAssertEqual(packet.dest, "n1")
         XCTAssertEqual(packet.body, .`init`(nodeID: "n1", nodeIDs: ["n1"]))
     }
-    
+
     func testInitOkMessageEncoding() throws {
         let response: RPCPacket.Message = .initOk
+        // swiftlint:disable:next force_try
         let str = String(data: try! RPCPacket.encoder.encode(response), encoding: .utf8)
         XCTAssertEqual(str, "{\"type\":\"init_ok\"}")
     }

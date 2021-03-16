@@ -7,10 +7,9 @@ import NIO
 import RaftNIO
 import Logging
 
-/// Key value node
 final public actor KvNode: MessageProvider {
 
-    private(set) var configuration: Configuration
+    var configuration: Configuration
     var raft: Raft<MemoryLog<String>>?
 
     private var logger: Logger {
