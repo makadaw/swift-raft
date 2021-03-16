@@ -14,8 +14,8 @@ class KvNodeTests: XCTestCase {
         let raft = KvNode(configuration: .init(id: 22))
 
         runAsyncTestAndBlock {
-            let onInit = try await raft.onMessage(.`init`(nodeID: "1", nodeIDs: ["1", "2"]))
-            XCTAssertEqual(onInit, .initOk)
+            let onInit = try await raft.onMessage(Maelstrom.Init(nodeID: "1", nodeIDs: ["1", "2"]))
+            XCTAssertEqual(onInit as? Maelstrom.InitOk, Maelstrom.InitOk())
         }
     }
 
@@ -23,13 +23,13 @@ class KvNodeTests: XCTestCase {
         let raft = KvNode(configuration: .init(id: 22))
 
         runAsyncTestAndBlock {
-            let onInit = try await raft.onMessage(.`init`(nodeID: "1", nodeIDs: ["1", "2"]))
-            XCTAssertEqual(onInit, .initOk)
+            let onInit = try await raft.onMessage(Maelstrom.Init(nodeID: "1", nodeIDs: ["1", "2"]))
+            XCTAssertEqual(onInit as? Maelstrom.InitOk, Maelstrom.InitOk())
             do {
-                _ = try await raft.onMessage(.read(key: 123))
+                _ = try await raft.onMessage(Maelstrom.Read(key: 123))
                 XCTFail("Read non existing key should throw an error")
             } catch {
-                XCTAssertEqual(error as? RPCPacket.Error, .keyDoesNotExist)
+                XCTAssertEqual(error as? Maelstrom.Error, .keyDoesNotExist)
             }
         }
     }

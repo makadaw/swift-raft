@@ -7,9 +7,15 @@ import Logging
 import NIO
 import NIOFoundationCompat
 
-public struct RPCPacket: ConcurrentValue {
-    // Simple error representation
-    public enum Error: Int, Swift.Error, Codable, ConcurrentValue {
+public protocol Message: Codable, ConcurrentValue {
+    static var type: String { get }
+}
+
+public struct Maelstrom {
+
+    // RPC error representation
+    public enum Error: Int, Swift.Error, Message {
+        public static var type = "error"
 
         // Indicates that the requested operation could not be completed within a timeout.
         case timeout = 0
@@ -58,27 +64,93 @@ public struct RPCPacket: ConcurrentValue {
         }
     }
 
-    public enum Message: Equatable, ConcurrentValue {
-        case error(Error)
-        case `init`(nodeID: String, nodeIDs: [String])
-        case initOk
+    public struct `Init`: Message, Equatable {
+        public static let type = "init"
+        public let nodeID: String
+        public let nodeIDs: [String]
 
-        // Echo messages
-        case echo(String)
-        case echoOk(String)
+        enum CodingKeys: CodingKey {
+            case nodeId, nodeIds
+        }
 
-        // Raft messages
-        case read(key: Int)
-        case readOk(value: Int)
-        case write(key: Int, value: Int)
-        case writeOk
-        case cas(key: Int, from: Int, to: Int)
-        case casOk
+        init(nodeID: String, nodeIDs: [String]) {
+            self.nodeID = nodeID
+            self.nodeIDs = nodeIDs
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            nodeID = try container.decode(String.self, forKey: .nodeId)
+            nodeIDs = try container.decode([String].self, forKey: .nodeIds)
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(nodeID, forKey: .nodeId)
+            try container.encode(nodeIDs, forKey: .nodeIds)
+        }
+    }
+
+    public struct InitOk: Message, Equatable {
+        public static let type = "init_ok"
+    }
+
+    public struct Echo: Message, Equatable {
+        public static let type = "echo"
+        public let echo: String
+    }
+
+    public struct EchoOk: Message, Equatable {
+        public static let type = "echo_ok"
+        public let echo: String
+    }
+
+    public struct Read: Message {
+        public static let type = "read"
+        let key: Int
+    }
+
+    public struct ReadOk: Message {
+        public static let type = "read_ok"
+        let value: Int
+    }
+
+    public struct Write: Message {
+        public static let type = "write"
+        let key: Int
+        let value: Int
+    }
+
+    public struct WriteOk: Message {
+        public static let type = "write_ok"
+    }
+
+    public struct Cas: Message {
+        public static let type = "cas"
+        let key: Int
+        let from: Int
+        let to: Int
+    }
+
+    public struct CasOk: Message {
+        public static let type = "cas_ok"
+    }
+}
+
+struct RPCPacket: ConcurrentValue {
+    // Decoder user info key. Use to store a mapping
+    static let key: CodingUserInfoKey = CodingUserInfoKey(rawValue: "MessageMapping")!
+
+    enum CodingError: Swift.Error {
+        case typeAlreadyRegistered(type: String)
+        case coderMissTypeMapper
+        case unregisterMessageType(type: String)
     }
 
     let src: String
     let dest: String
     let id: Int
+
     var body: Message {
         internalBody.body
     }
@@ -94,18 +166,6 @@ public struct RPCPacket: ConcurrentValue {
         self.id = id
         self.internalBody = ParseMessage(body: body, msgId: msgID, inReplyTo: inReplyTo)
     }
-
-    static var decoder: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return decoder
-    }
-
-    static var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        return encoder
-    }
 }
 
 extension RPCPacket: Codable {
@@ -116,7 +176,7 @@ extension RPCPacket: Codable {
         let inReplyTo: Int?
 
         enum CodingKeys: String, CodingKey {
-            case msgId, inReplyTo
+            case type, msgId, inReplyTo
         }
 
         init(body: Message, msgId: Int?, inReplyTo: Int?) {
@@ -126,16 +186,26 @@ extension RPCPacket: Codable {
         }
 
         init(from decoder: Decoder) throws {
+            guard let mapping = decoder.userInfo[RPCPacket.key] as? [String: Message.Type] else {
+                throw CodingError.coderMissTypeMapper
+            }
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let type = try container.decode(String.self, forKey: .type)
+            guard let messageType = mapping[type] else {
+                throw CodingError.unregisterMessageType(type: type)
+            }
 
-            self.init(body: try Message(from: decoder),
+            self.init(body: try messageType.init(from: decoder),
                       msgId: try container.decodeIfPresent(Int.self, forKey: .msgId),
                       inReplyTo: try container.decodeIfPresent(Int.self, forKey: .inReplyTo))
         }
 
         func encode(to encoder: Encoder) throws {
+            // Encode message to the container
             try body.encode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
+            // Encode default fields to the container
+            try container.encode(type(of: body).type, forKey: .type)
             try container.encodeIfPresent(msgId, forKey: .msgId)
             try container.encodeIfPresent(inReplyTo, forKey: .inReplyTo)
         }
@@ -150,117 +220,35 @@ extension RPCPacket: Codable {
 
 extension RPCPacket {
     var isInit: Bool {
-        if case .`init` = body {
+        if body is Maelstrom.Init {
             return true
         }
         return false
     }
 
     var initNodeID: String? {
-        if case let .`init`(nodeID, _) = body {
-            return nodeID
+        guard let body = self.body as? Maelstrom.Init else {
+            return nil
         }
-        return nil
+        return body.nodeID
     }
 }
-
-extension RPCPacket.Message: Codable {
-    enum CodingKeys: String, CodingKey {
-        case type, code, nodeId, nodeIds
-        case echo, key, value, from, to
-    }
-
-    // swiftlint:disable:next cyclomatic_complexity
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        switch try container.decode(String.self, forKey: .type) {
-            case "error":
-                self = .error(try RPCPacket.Error(from: decoder))
-            case "init":
-                self = .`init`(nodeID: try container.decode(String.self, forKey: .nodeId),
-                               nodeIDs: try container.decode([String].self, forKey: .nodeIds))
-            case "init_ok":
-                self = .initOk
-
-            case "echo":
-                self = .echo(try container.decode(String.self, forKey: .echo))
-            case "echo_ok":
-                self = .echoOk(try container.decode(String.self, forKey: .echo))
-
-            case "read":
-                self = .read(key: try container.decode(Int.self, forKey: .key))
-            case "read_ok":
-                self = .readOk(value: try container.decode(Int.self, forKey: .value))
-            case "write":
-                self = .write(key: try container.decode(Int.self, forKey: .key),
-                              value: try container.decode(Int.self, forKey: .value))
-            case "write_ok":
-                self = .writeOk
-            case "cas":
-                self = .cas(key: try container.decode(Int.self, forKey: .key),
-                            from: try container.decode(Int.self, forKey: .from),
-                            to: try container.decode(Int.self, forKey: .to))
-            case "cas_ok":
-                self = .casOk
-
-            default:
-                throw RPCPacket.Error.notSupported
-        }
-    }
-
-    // swiftlint:disable:next cyclomatic_complexity
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-            case let .error(error):
-                try container.encode("error", forKey: .type)
-                try error.encode(to: encoder)
-            case let .`init`(nodeId, nodeIds):
-                try container.encode("init", forKey: .type)
-                try container.encode(nodeId, forKey: .nodeId)
-                try container.encode(nodeIds, forKey: .nodeIds)
-            case .initOk:
-                try container.encode("init_ok", forKey: .type)
-
-            case let .echo(payload):
-                try container.encode("echo", forKey: .type)
-                try container.encode(payload, forKey: .echo)
-            case let .echoOk(payload):
-                try container.encode("echo_ok", forKey: .type)
-                try container.encode(payload, forKey: .echo)
-
-            case let .read(key: key):
-                try container.encode("read", forKey: .type)
-                try container.encode(key, forKey: .key)
-            case let .readOk(value: value):
-                try container.encode("read_ok", forKey: .type)
-                try container.encode(value, forKey: .value)
-            case let .write(key: key, value: value):
-                try container.encode("read", forKey: .type)
-                try container.encode(key, forKey: .key)
-                try container.encode(value, forKey: .value)
-            case .writeOk:
-                try container.encode("write_ok", forKey: .type)
-            case let .cas(key: key, from: from, to: to):
-                try container.encode("cas", forKey: .type)
-                try container.encode(key, forKey: .key)
-                try container.encode(from, forKey: .from)
-                try container.encode(to, forKey: .to)
-            case .casOk:
-                try container.encode("cas_ok", forKey: .type)
-        }
-    }
-}
-
 
 class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
     typealias InboundOut = RPCPacket
     typealias OutboundIn = RPCPacket
 
-    let logger: Logger
+    private let logger: Logger
+    private let jsonDecoder: JSONDecoder
+    private let jsonEncoder: JSONEncoder
 
     init(logger: Logger) {
         self.logger = logger
+        self.jsonDecoder = JSONDecoder()
+        self.jsonDecoder.keyDecodingStrategy = .convertFromSnakeCase
+        self.jsonDecoder.userInfo[RPCPacket.key] = [:]
+        self.jsonEncoder = JSONEncoder()
+        self.jsonEncoder.keyEncodingStrategy = .convertToSnakeCase
     }
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
@@ -281,7 +269,7 @@ class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
         }
         do {
             logger.trace("Get JSON \(String(data: line, encoding: .utf8) ?? "")")
-            return try RPCPacket.decoder.decode(RPCPacket.self, from: line)
+            return try decode(data: line)
         } catch {
             logger.error("Failed to parse RPC \(error)")
         }
@@ -309,7 +297,7 @@ class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
     func encode(data: RPCPacket, out: inout ByteBuffer) throws {
         logger.trace("Encoding RPCPacket: \(data)")
         do {
-            let body = try RPCPacket.encoder.encode(data)
+            let body = try encode(packet: data)
             logger.trace("Response JSON \(String(data: body, encoding: .utf8)!)")
             out.writeData(body)
             out.writeString("\n")
@@ -319,4 +307,29 @@ class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
         }
     }
 
+    // MARK: Messages registry
+    private var register: [String: Message.Type] {
+        get {
+            // swiftlint:disable:next force_cast
+            self.jsonDecoder.userInfo[RPCPacket.key] as! [String: Message.Type]
+        }
+        set {
+            self.jsonDecoder.userInfo[RPCPacket.key] = newValue
+        }
+    }
+
+    func registerMessage<T: Message>(_ message: T.Type) throws {
+        guard register[T.type] == nil else {
+            throw RPCPacket.CodingError.typeAlreadyRegistered(type: T.type)
+        }
+        register[T.type] = T.self
+    }
+
+    func decode(data: Data) throws -> RPCPacket {
+        try jsonDecoder.decode(RPCPacket.self, from: data)
+    }
+
+    func encode(packet: RPCPacket) throws -> Data {
+        try jsonEncoder.encode(packet)
+    }
 }
