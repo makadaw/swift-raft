@@ -18,7 +18,7 @@ class MessageHandlerTests: XCTestCase {
         }
 
         try channel.pipeline.addHandlers([
-            echoHandler,
+            echoHandler
         ]).wait()
 
         let request = RPCPacket(src: "t0", dest: "n1", id: 0, body: .`init`(nodeID: "n1", nodeIDs: ["n1", "n2"]), msgID: 5)

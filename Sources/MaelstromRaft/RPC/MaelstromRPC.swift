@@ -81,7 +81,7 @@ extension NIOAtomic where T == Int {
 
 extension ChannelHandlerContext: UnsafeConcurrentValue {}
 
-///Maelstrom RPC messages service
+/// Maelstrom RPC messages service
 final public class MaelstromRPC {
 
     let logger: Logger

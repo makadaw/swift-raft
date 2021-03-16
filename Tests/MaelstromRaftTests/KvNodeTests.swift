@@ -36,7 +36,7 @@ class KvNodeTests: XCTestCase {
 }
 
 /// Replace deprecated `runAsyncAndBlock` until XCTest support async
-func runAsyncTestAndBlock(closure: @escaping () async throws -> ()) {
+func runAsyncTestAndBlock(closure: @escaping () async throws -> Void) {
     let group = DispatchGroup()
     group.enter()
 
