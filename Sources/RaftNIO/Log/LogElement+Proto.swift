@@ -11,7 +11,7 @@ extension LogElement {
             case .configuration:
                 self = LogElement.configuration(termId: raftLog.term, index: raftLog.index)
             case .data:
-                guard let content = T.init(data: raftLog.data) else {
+                guard let content = T.decode(from: raftLog.data) else {
                     return nil
                 }
 

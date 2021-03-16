@@ -18,9 +18,10 @@ final public actor KvNode: MessageProvider {
 
     public init(configuration: Configuration) {
         self.configuration = configuration
+        self.stateMachine = KvStateMachine()
     }
 
-    var storage: [Int: Int] = [:]
+    var stateMachine: KvStateMachine
 
     public func onMessage(_ message: RPCPacket.Message) async throws -> RPCPacket.Message {
         switch message {
@@ -42,28 +43,55 @@ final public actor KvNode: MessageProvider {
 
             case let .read(key: key):
                 logger.trace("Key: \(key)")
-                if let value = storage[key] {
-                    return .readOk(value: value)
-                }
-                throw RPCPacket.Error.keyDoesNotExist
+                return try await read(key: key)
 
             case let .write(key: key, value: value):
                 logger.trace("Write \(value) for key \(key)")
-                storage[key] = value
-                return .writeOk
+                return try await write(key: key, value: value)
 
             case let .cas(key: key, from: from, to: to):
                 logger.trace("Write \(to) from \(from) key \(key)")
-                if storage[key] == from {
-                    storage[key] = to
-                    return .casOk
-                }
-                throw RPCPacket.Error.preconditionFailed
-
+                return try await cas(key: key, from: from, to: to)
 
             default:
                 throw RPCPacket.Error.notSupported
         }
     }
 
+    private func read(key: Int) async throws -> RPCPacket.Message {
+        do {
+            return .readOk(value: try await self.stateMachine.query(key))
+        } catch KvStateMachine.Error.keyDoesNotExist {
+            throw RPCPacket.Error.keyDoesNotExist
+        } catch {
+            throw RPCPacket.Error.crash
+        }
+    }
+
+    private func write(key: Int, value: Int) async throws -> RPCPacket.Message {
+        do {
+            try await stateMachine.apply(entry: .init(key: key, value: value))
+            return .writeOk
+        } catch {
+            throw RPCPacket.Error.crash
+        }
+    }
+
+
+    private func cas(key: Int, from: Int, to: Int) async throws -> RPCPacket.Message {
+        do {
+            let current = try? await stateMachine.query(key)
+            if from == current {
+                try await stateMachine.apply(entry: .init(key: key, value: to))
+            } else {
+                throw RPCPacket.Error.preconditionFailed
+            }
+            return .casOk
+        } catch {
+            if error is RPCPacket.Error {
+                throw error
+            }
+            throw RPCPacket.Error.crash
+        }
+    }
 }
