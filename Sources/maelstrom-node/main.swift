@@ -27,6 +27,7 @@ class App {
             _ = try service.start()
         }, shutdown: .sync {
             service.stop()
+            try group.syncShutdownGracefully()
         })
 
         try lifecycle.startAndWait()
