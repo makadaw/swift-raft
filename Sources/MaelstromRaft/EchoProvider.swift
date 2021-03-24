@@ -14,7 +14,7 @@ public actor EchoProvider: MessageProvider {
                 return Maelstrom.InitOk()
 
             case let echo as Maelstrom.Echo:
-                return Maelstrom.Echo(echo: echo.echo)
+                return Maelstrom.EchoOk(echo: echo.echo)
 
             default:
                 throw Maelstrom.Error.notSupported

@@ -144,7 +144,6 @@ struct RPCPacket: ConcurrentValue {
     enum CodingError: Swift.Error {
         case typeAlreadyRegistered(type: String)
         case coderMissTypeMapper
-        case unregisterMessageType(type: String)
     }
 
     let src: String
@@ -169,7 +168,7 @@ struct RPCPacket: ConcurrentValue {
 }
 
 extension RPCPacket: Codable {
-
+    /// Use "smart" struct to get msgID, replyID from message body
     struct ParseMessage: Codable, ConcurrentValue {
         let body: Message
         let msgId: Int?
@@ -191,11 +190,9 @@ extension RPCPacket: Codable {
             }
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let type = try container.decode(String.self, forKey: .type)
-            guard let messageType = mapping[type] else {
-                throw CodingError.unregisterMessageType(type: type)
-            }
 
-            self.init(body: try messageType.init(from: decoder),
+            // In case we don't know this message, parse as error
+            self.init(body: try mapping[type].map({ try $0.init(from: decoder) }) ?? Maelstrom.Error.notSupported,
                       msgId: try container.decodeIfPresent(Int.self, forKey: .msgId),
                       inReplyTo: try container.decodeIfPresent(Int.self, forKey: .inReplyTo))
         }
@@ -298,7 +295,7 @@ class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
         logger.trace("Encoding RPCPacket: \(data)")
         do {
             let body = try encode(packet: data)
-            logger.trace("Response JSON \(String(data: body, encoding: .utf8)!)")
+            logger.trace("Send JSON \(String(data: body, encoding: .utf8)!)")
             out.writeData(body)
             out.writeString("\n")
         } catch {
@@ -318,11 +315,11 @@ class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
         }
     }
 
-    func registerMessage<T: Message>(_ message: T.Type) throws {
-        guard register[T.type] == nil else {
-            throw RPCPacket.CodingError.typeAlreadyRegistered(type: T.type)
+    func registerMessage(_ message: Message.Type) throws {
+        guard register[message.type] == nil else {
+            throw RPCPacket.CodingError.typeAlreadyRegistered(type: message.type)
         }
-        register[T.type] = T.self
+        register[message.type] = message.self
     }
 
     func decode(data: Data) throws -> RPCPacket {
