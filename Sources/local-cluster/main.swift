@@ -49,17 +49,19 @@ struct Start: ParsableCommand {
             .forEach { node in
                 var config = Configuration(id: node.id, port: node.port)
                 config.logger.logLevel = .debug
-                config.protocol.electionTimeout = .milliseconds(1000)
+                config.protocol.electionTimeout = .milliseconds(2000)
                 config.log.root = tempDirectory.appending("node-\(node.id)")
-                let raftNode = RaftNIO(config: config,
-                                       peers: peers.filter({ $0.id != node.id }),
-                                       group: group)
+                let bootstrap = RaftNIOBootstrap(group: group,
+                                                 config: config,
+                                                 peers: peers.filter({ $0.id != node.id }))
 
                 lifecycle.register(
                     label: "raft-\(node.id)",
-                    start: .sync { try raftNode.start() },
+                    start: .sync {
+                        try bootstrap.start()
+                    },
                     shutdown: .sync {
-                        try raftNode.shutdown()?.wait()
+                        try bootstrap.shutdown()?.wait()
                     })
             }
 
