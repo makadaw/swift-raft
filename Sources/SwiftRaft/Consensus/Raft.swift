@@ -186,58 +186,6 @@ extension Raft {
 
 }
 
-/// Vote request message. Use for both pre and real vote
-public struct RequestVote {
-
-    public enum VoteType: ConcurrentValue {
-        case preVote
-        case vote
-    }
-
-    public struct Request: ConcurrentValue {
-        /// Vote type `vote` or `PreVote`
-        let type: VoteType
-
-        /// Candidate’s term
-        let termID: Term.ID
-
-        /// Candidate requesting vote
-        let candidateID: NodeID
-
-        /// Index of candidate’s last log entry
-        let lastLogIndex: UInt64
-
-        /// Term of candidate’s last log entry
-        let lastLogTerm: UInt64
-
-        public init(type: VoteType, termID: Term.ID, candidateID: NodeID, lastLogIndex: UInt64, lastLogTerm: UInt64) {
-            self.type = type
-            self.termID = termID
-            self.candidateID = candidateID
-            self.lastLogIndex = lastLogIndex
-            self.lastLogTerm = lastLogTerm
-        }
-
-    }
-
-    public struct Response: ConcurrentValue {
-        /// Vote type `vote` or `PreVote`, should be the the same as in request
-        let type: VoteType
-
-        /// Current term of the node, for candidate to update itself
-        let termID: Term.ID
-
-        /// True means candidate received vote
-        let voteGranted: Bool
-
-        public init(type: VoteType, termID: Term.ID, voteGranted: Bool) {
-            self.type = type
-            self.termID = termID
-            self.voteGranted = voteGranted
-        }
-    }
-}
-
 // MARK: Entries
 extension Raft {
 
@@ -309,55 +257,5 @@ extension Raft {
     }
 }
 
-public struct AppendEntries {
-
-    public struct Request<T: LogData>: ConcurrentValue {
-        public typealias Element = LogElement<T>
-
-        /// Current leader term id. Followers use them to validate correctness
-        public let termID: Term.ID
-
-        /// Leader id in the cluster
-        public let leaderID: NodeID
-
-        /// Index of log entry immediately preceding new ones
-        public let prevLogIndex: UInt64
-
-        /// Term id of prevLogIndex entry
-        public let prevLogTerm: UInt64
-
-        /// Leader’s commit index
-        public let leaderCommit: UInt64
-
-        // TODO Make sure compiler can check that generic argument is `ConcurrentValue`
-        /// Log entries to store (empty for heartbeat; may send more than one for efficiency)
-//        public let entries: [Element]
-
-        public init(termID: Term.ID,
-                    leaderID: NodeID,
-                    prevLogIndex: UInt64,
-                    prevLogTerm: UInt64,
-                    leaderCommit: UInt64,
-                    entries: [Element]) {
-            self.termID = termID
-            self.leaderID = leaderID
-            self.prevLogIndex = prevLogIndex
-            self.prevLogTerm = prevLogTerm
-            self.leaderCommit = leaderCommit
-//            self.entries = entries
-        }
-    }
-
-    public struct Response: ConcurrentValue {
-        /// Current node term, for leader to update itself
-        public let termID: Term.ID
-
-        /// True if a follower accepted the message
-        public let success: Bool
-
-        public init(termID: Term.ID, success: Bool) {
-            self.termID = termID
-            self.success = success
-        }
     }
 }
