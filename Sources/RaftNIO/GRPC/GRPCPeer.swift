@@ -32,6 +32,14 @@ actor GRPCPeer: SwiftRaft.Peer {
     }
 
     func requestVote(_ request: RequestVote.Request) async throws -> RequestVote.Response {
+        if request.termID > 1000 {
+            // Test run should not come to this term, look like there are a problem with request struct
+            /*
+             The only difference is `RequestVote.Request` that passed here created outside the `Task.group`.
+             */
+            debugPrint(request)
+            assert(false)
+        }
         let rpcRequest = Raft_RequestVote.Request.with {
             $0.type = request.type == .vote ? .vote : .preVote
             $0.candidateID = request.candidateID

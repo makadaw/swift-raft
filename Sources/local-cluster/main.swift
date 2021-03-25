@@ -16,7 +16,7 @@ struct Start: ParsableCommand {
     var peers: [String] = []
 
     @Option(help: "number of local nodes to start, use if peers is not provided")
-    var num: Int = 0
+    var num: Int = 3
 
     @Option(help: "node id to run, skip if want to run all nodes", transform: { NodeID($0) ?? 0 })
     var runNode: NodeID?

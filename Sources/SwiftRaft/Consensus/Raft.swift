@@ -124,8 +124,11 @@ extension Raft {
 
         // Get list of active peers
         let peers = self.peers
-        let myself = self.myself
-        let termID = term.id
+        let request = RequestVote.Request(type: type,
+                                          termID: term.id,
+                                          candidateID: myself,
+                                          lastLogIndex: 0,
+                                          lastLogTerm: 0)
 
         // TODO Handle errors correctly
         // swiftlint:disable:next force_try
@@ -140,11 +143,7 @@ extension Raft {
             for peer in peers {
                 // We should stop election at the moment when we got quorum
                 await group.add(operation: {
-                    let request = RequestVote.Request(type: type,
-                                                      termID: termID,
-                                                      candidateID: myself,
-                                                      lastLogIndex: 0,
-                                                      lastLogTerm: 0)
+                    debugPrint("Value before pass in the method \(request)")
                     return try await peer.requestVote(request).voteGranted
                 })
             }
