@@ -85,7 +85,7 @@ struct FileLog<T: LogData>: Log {
 /// Each method are isolated
 /// TODO:
 ///   - Check if open 1 descriptor can be more beneficial
-class LogMetadataFileStorage {
+class LogMetadataFileStorage: ConcurrentValue {
 
     enum Error: Swift.Error {
         case metadataNotEncodable

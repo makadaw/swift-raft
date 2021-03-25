@@ -59,7 +59,10 @@ let package = Package(
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
             ],
-            exclude: ["Proto/raft.proto"]),
+            exclude: ["Proto/raft.proto"],
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
+            ]),
         .target(
             name: "MaelstromRaft",
             dependencies: [

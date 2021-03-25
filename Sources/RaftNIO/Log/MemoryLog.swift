@@ -75,3 +75,5 @@ public struct MemoryLog<T: LogData>: Log {
     /// Memory log do not write metadata to any storage
     public var metadata = LogMetadata()
 }
+
+extension CircularBuffer: UnsafeConcurrentValue {}
