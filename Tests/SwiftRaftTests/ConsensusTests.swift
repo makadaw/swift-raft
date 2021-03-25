@@ -10,7 +10,7 @@ final class ConsensusTests: XCTestCase {
     func testElection() {
         let instance = buildTestInstance()
         runAsyncTestAndBlock {
-            await instance.becomeLeader()
+            await instance.becomeLeaderInTerm(10)
             let response = await instance.onVoteRequest(.init(type: .vote, termID: 3, candidateID: 2, lastLogIndex: 0, lastLogTerm: 0))
             XCTAssertEqual(response.termID, 10)
             XCTAssertFalse(response.voteGranted)

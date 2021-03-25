@@ -8,7 +8,7 @@ public enum LogError: Error {
 }
 
 /// Represent a Raft log
-public protocol Log: Sequence where Element == LogElement<Data> {
+public protocol Log: Sequence, ConcurrentValue where Element == LogElement<Data> {
     associatedtype Data: LogData
 
     /// First index in the log, it could be not 0 as log can be trimmed

@@ -10,9 +10,9 @@ extension Raft {
         term
     }
 
-    func becomeLeader() async {
+    func becomeLeaderInTerm(_ id: Term.ID = 10) async {
         state = .leader
-        term = Term(myself: config.myself.id, id: 10)
+        term = Term(myself: config.myself.id, id: id)
     }
 }
 

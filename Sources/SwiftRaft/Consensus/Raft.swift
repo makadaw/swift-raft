@@ -55,7 +55,7 @@ public actor Raft<ApplicationLog: Log> {
 extension Raft {
 
     /// Commands related to changes in election process
-    public enum ElectionCommand: Equatable {
+    public enum ElectionCommand: Equatable, ConcurrentValue {
         /// Stop election timer, this means that node not in a follower state
         case stopTimer
 
@@ -87,6 +87,7 @@ extension Raft {
     /// Try to run a pre vote campaign
     public func startPreVote() async -> ElectionCommand {
         let term = self.term
+        _ = _tryMoveTo(nextState: .preCandidate)
         let voteResult = await startVote(type: .preVote)
         if voteResult {
             logger.debug("Won preVote election, starting vote")
@@ -98,7 +99,8 @@ extension Raft {
 
     /// Try to run a election campaign
     public func startVote() async -> ElectionCommand {
-        let voteResult = await startVote(type: .preVote)
+        _ = _tryMoveTo(nextState: .candidate)
+        let voteResult = await startVote(type: .vote)
         logger.debug("Finish campign", metadata: [
             "vote/result": "\(voteResult)",
             "vote/term": "\(self.term)"
@@ -119,28 +121,36 @@ extension Raft {
         }
         // How much votes we need to win
         let tallyVotes = self.peers.quorumSize
-        let request = RequestVote.Request(type: type,
-                                          termID: term.id,
-                                          candidateID: myself,
-                                          lastLogIndex: 0,
-                                          lastLogTerm: 0)
+
         // Get list of active peers
         let peers = self.peers
+        let myself = self.myself
+        let termID = term.id
 
         // TODO Handle errors correctly
         // swiftlint:disable:next force_try
         let result = try! await Task.withGroup(resultType: Bool.self, returning: Bool.self) { group in
 
+            // Vote for ourself, need it for one node cluster to work
+            await group.add(operation: {
+                true
+            })
+
             // We should stop election at the moment when we got quorum
             for peer in peers {
                 // We should stop election at the moment when we got quorum
                 await group.add(operation: {
-                    await peer.requestVote(request).voteGranted
+                    let request = RequestVote.Request(type: type,
+                                                      termID: termID,
+                                                      candidateID: myself,
+                                                      lastLogIndex: 0,
+                                                      lastLogTerm: 0)
+                    return try await peer.requestVote(request).voteGranted
                 })
             }
 
             do {
-                var grantedVotes: UInt = 1 // We already votes for ourself
+                var grantedVotes: UInt = 0
                 while let result = try await group.next() {
                     grantedVotes += result ? 1 : 0
                     if grantedVotes >= tallyVotes {
@@ -162,7 +172,7 @@ extension Raft {
     ///
     /// 1. Reply false if term `<` currentTerm (§5.1)
     /// 2. If votedFor is null or candidateId, and candidate’s log is at least as up-to-date as receiver’s log, grant vote (§5.2, §5.4)
-    func onVoteRequest(_ request: RequestVote.Request) async -> RequestVote.Response {
+    public func onVoteRequest(_ request: RequestVote.Request) async -> RequestVote.Response {
         // TODO: On vote response we also should reset election timer
         let granted: Bool = {
             let lastLogTerm = self.log.metadata.termID ?? 0
@@ -181,7 +191,7 @@ extension Raft {
             "vote/candidate": "\(request.candidateID)",
             "vote/granted": "\(granted)"
         ])
-        return .init(type: request.type, termID: self.term.id, voteGranted: granted)
+        return .init(type: request.type, termID: term.id, voteGranted: granted)
     }
 
 }
@@ -191,13 +201,19 @@ extension Raft {
 
     public enum EntriesCommand: ConcurrentValue, Equatable {
         /// For non leader state reset an election timer
-        case resetElectionTimer
+        case resetElectionTimer(delay: DispatchTimeInterval)
+
+        case scheduleHeartBeatTask(delay: DispatchTimeInterval)
+
+        case sendHeartBeat
+
+        case stepDown
     }
 
     public struct AppendResponse: ConcurrentValue {
-        let response: AppendEntries.Response
+        public let response: AppendEntries.Response
 
-        let commands: [EntriesCommand]
+        public let commands: [EntriesCommand]
 
         init(_ response: AppendEntries.Response, commands: [EntriesCommand]) {
             self.response = response
@@ -205,8 +221,55 @@ extension Raft {
         }
     }
 
+    public func onBecomeLeader() async -> [EntriesCommand] {
+        guard case .leader = state else {
+            return []
+        }
+        return [.sendHeartBeat,
+                .scheduleHeartBeatTask(delay: config.protocol.heartbeatPeriod)]
+    }
+
+    public func sendHeartBeat() async -> [EntriesCommand] {
+        guard case .leader = state else {
+            logger.error("Not a leader tried to send a heartbeat message")
+            return [.stepDown,
+                    .resetElectionTimer(delay: config.protocol.nextElectionTimeout)]
+        }
+        let myself = myself
+        let termID = term.id
+        // Send heartbeat to all peers
+        do {
+            return try await Task.withGroup(
+                resultType: AppendEntries.Response.self,
+                returning: [EntriesCommand].self,
+                body: { group in
+                    for peer in self.peers {
+                        await group.add(operation: {
+                            let request = AppendEntries.Request<ApplicationLog.Data>(
+                                termID: termID,
+                                leaderID: myself,
+                                prevLogIndex: 0,
+                                prevLogTerm: 0,
+                                leaderCommit: 0,
+                                entries: [])
+                            return try await peer.sendHeartbeat(request)
+                        })
+                    }
+                    while let result = try await group.next() {
+                        if !result.success {
+                            logger.warning("Peer do not accept entries")
+                        }
+                    }
+                    return []
+                })
+        } catch {
+            logger.error("Heartbeat error")
+        }
+        return []
+    }
+
     /// Process Entry append
-    func onAppendEntries<T>(_ request: AppendEntries.Request<T>) async -> AppendResponse where T == ApplicationLog.Data {
+    public func onAppendEntries<T>(_ request: AppendEntries.Request<T>) async -> AppendResponse where T == ApplicationLog.Data {
         // 1. Reply false if term `<` currentTerm (§5.1)
         guard request.termID <= self.term.id else {
             return rejectAppendEntry(leader: request.leaderID, higherTermID: request.termID)
@@ -231,7 +294,7 @@ extension Raft {
         // At the end node should reset an election timer if not a leader. This is a very important step
         if !state.isLeader {
             // Reset election timer if node is not a leader
-            commands.append(.resetElectionTimer)
+            commands.append(.resetElectionTimer(delay: config.protocol.nextElectionTimeout))
         }
         return AppendResponse(.init(termID: term.id, success: isIAmAFollower && isLogOk), commands: commands)
     }
@@ -253,9 +316,7 @@ extension Raft {
                                     "error": "\(error)"])
         }
         // Response with reject and reset election timer, as we not a leader anymore
-        return AppendResponse(.init(termID: term.id, success: false), commands: [.resetElectionTimer])
-    }
-}
-
+        return AppendResponse(.init(termID: term.id, success: false),
+                              commands: [.resetElectionTimer(delay: config.protocol.nextElectionTimeout)])
     }
 }
