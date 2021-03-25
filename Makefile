@@ -60,6 +60,8 @@ APP_PB=$(APP_PROTO:.proto=.pb.swift)
 .PHONY:
 generate: ${PROTOC_GEN_GRPC_SWIFT} ${RAFT_PB} ${RAFT_GRPC} ${APP_PB}
 
+swiftlint: 
+	${SWIFT} run swiftlint lint --strict --config .swiftlint.yml
 
 ### Testing ####################################################################
 
