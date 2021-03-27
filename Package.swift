@@ -41,6 +41,9 @@ let package = Package(
                 "MaelstromRaft",
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Lifecycle", package: "swift-service-lifecycle"),
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
             ]),
         .target(
             name: "SwiftRaft",

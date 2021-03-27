@@ -119,7 +119,7 @@ extension NIOAtomic where T == Int {
 extension ChannelHandlerContext: UnsafeConcurrentValue {}
 
 /// Maelstrom RPC messages service
-final public class MaelstromRPC {
+final public actor MaelstromRPC {
 
     let logger: Logger
     let bootstrap: NIOPipeBootstrap
@@ -152,25 +152,25 @@ final public class MaelstromRPC {
     }
 
     /// Start a service. Service subscribe on STDIN and response to STDOUT
-    public func start() throws -> Channel {
-        try innerStart(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO).wait()
+    public func start() async throws {
+        try await innerStart(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
     }
 
-    func innerStart(inputDescriptor: CInt, outputDescriptor: CInt) throws -> EventLoopFuture<Channel> {
-        let channel = bootstrap.withPipes(inputDescriptor: inputDescriptor, outputDescriptor: outputDescriptor)
-        channel.whenSuccess {
-            self.channel = $0
-            self.logger.info("Maelstrom started and listening on STDIN")
-        }
+    @discardableResult
+    func innerStart(inputDescriptor: CInt, outputDescriptor: CInt) async throws -> Channel {
+        let channel = try await bootstrap.withPipes(inputDescriptor: inputDescriptor, outputDescriptor: outputDescriptor).get()
+        self.channel = channel
+        self.logger.info("Maelstrom started and listening on STDIN")
         return channel
     }
 
     /// Close the channel if it was open. Will not fire an error
-    public func stop() {
+    public func stop() async {
         do {
-            try channel?.close().wait()
+            try await channel?.close().get()
         } catch {
             logger.error("Error shutting down: \(error)")
+            return
         }
         logger.info("Maelstrom stopped")
     }
@@ -196,7 +196,7 @@ final public class MaelstromRPC {
 
     // MARK: Broadcast
     /// Broadcast message into Maelstrom network. Future will be fulfilled when we get an response from Maelstrom network
-    public func send(_ message: Message, dest: String) -> EventLoopFuture<Message> {
+    public func send(_ message: Message, dest: String) async throws -> Message {
         guard let channel = self.channel else {
             preconditionFailure("Send a message without starting a channel")
         }
@@ -207,6 +207,6 @@ final public class MaelstromRPC {
         let promise = group.next().makePromise(of: Message.self)
         messageHandler.registerCallback(MessageResponseCallback(msgID: msgID, src: dest, promise: promise))
         _ = channel.writeAndFlush(packet)
-        return promise.futureResult
+        return try await promise.futureResult.get()
     }
 }

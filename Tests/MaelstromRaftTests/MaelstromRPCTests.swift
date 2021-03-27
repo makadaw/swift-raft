@@ -11,7 +11,7 @@ import RaftNIO
 class MaelstromRPCTests: XCTestCase {
 
     var group: MultiThreadedEventLoopGroup! = nil
-
+    
     let producerID = "31"
     let consumerID = "42"
 
@@ -24,37 +24,37 @@ class MaelstromRPCTests: XCTestCase {
         // MaelstromRPC get ownership on this descriptors and will close it on close call
         XCTAssertNoThrow(try withPipe { pipe1Read, pipe1Write in
             try withPipe({ pipe2Read, pipe2Write in
-                let producer = try MaelstromRPC(
-                    group: group,
-                    logger: {
-                        var logger = Logger(label: "PRODUCER")
-                        logger.logLevel = .trace
-                        return logger
-                    }(),
-                    messageProvider: EchoProvider())
-                _ = try producer.innerStart(inputDescriptor: FileHandle(fileDescriptor: try pipe1Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
-                                            outputDescriptor: FileHandle(fileDescriptor: try pipe2Write.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor)
-                    .wait()
+                runAsyncTestAndBlock {
+                    let producer = try MaelstromRPC(
+                        group: self.group,
+                        logger: {
+                            var logger = Logger(label: "PRODUCER")
+                            logger.logLevel = .trace
+                            return logger
+                        }(),
+                        messageProvider: EchoProvider())
 
-                let consumer = try MaelstromRPC(
-                    group: group,
-                    logger: {
-                        var logger = Logger(label: "CONSUMER")
-                        logger.logLevel = .trace
-                        return logger
-                    }(),
-                    messageProvider: EchoProvider())
-                _ = try consumer.innerStart(inputDescriptor: FileHandle(fileDescriptor: try pipe2Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
-                                            outputDescriptor: FileHandle(fileDescriptor: try pipe1Write.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor)
-                    .wait()
+                    try await producer.innerStart(inputDescriptor: FileHandle(fileDescriptor: try pipe1Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
+                                                  outputDescriptor: FileHandle(fileDescriptor: try pipe2Write.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor)
 
+                    let consumer = try MaelstromRPC(
+                        group: self.group,
+                        logger: {
+                            var logger = Logger(label: "CONSUMER")
+                            logger.logLevel = .trace
+                            return logger
+                        }(),
+                        messageProvider: EchoProvider())
+                    try await consumer.innerStart(inputDescriptor: FileHandle(fileDescriptor: try pipe2Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
+                                                  outputDescriptor: FileHandle(fileDescriptor: try pipe1Write.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor)
 
-                // Force set a node IDs, so it will use it to send requests
-                producer.messageHandler.nodeID = producerID
-                consumer.messageHandler.nodeID = consumerID
+                    // Force set a node IDs, so it will use it to send requests
+                    producer.messageHandler.nodeID = self.producerID
+                    consumer.messageHandler.nodeID = self.consumerID
 
-                self.producer = producer
-                self.consumer = consumer
+                    self.producer = producer
+                    self.consumer = consumer
+                }
                 return []
             })
             return []
@@ -62,23 +62,31 @@ class MaelstromRPCTests: XCTestCase {
     }
 
     override func tearDown() {
-        producer.stop()
-        consumer.stop()
-        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        runAsyncTestAndBlock {
+            await self.producer.stop()
+            await self.consumer.stop()
+            XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        }
     }
 
     func testSendMessage() throws {
-        // Send a echo request to the consumer
-        let response = try producer.send(Maelstrom.Echo(echo: "Text 61"), dest: consumerID).wait()
-        // Validate that consumer response with a `echo_ok` message
-        XCTAssertEqual(response as? Maelstrom.EchoOk, Maelstrom.EchoOk(echo: "Text 61"))
+        runAsyncTestAndBlock {
+            // Send a echo request to the consumer
+            let response = try await self.producer.send(Maelstrom.Echo(echo: "Text 61"), dest: self.consumerID)
+            // Validate that consumer response with a `echo_ok` message
+            XCTAssertEqual(response as? Maelstrom.EchoOk, Maelstrom.EchoOk(echo: "Text 61"))
+        }
+
     }
 
     func testNotSupportedMessages() throws {
-        XCTAssertThrowsError(try producer.send(NotSupportedMessage(), dest: consumerID).wait(),
-                             "We should got an error on not supported message")
-        { error in
-            XCTAssertEqual(error as? Maelstrom.Error, .notSupported)
+        runAsyncTestAndBlock {
+            do {
+                _ = try await self.producer.send(NotSupportedMessage(), dest: self.consumerID)
+                XCTFail("We should got an error on not supported message")
+            } catch {
+                XCTAssertEqual(error as? Maelstrom.Error, .notSupported)
+            }
         }
     }
 }

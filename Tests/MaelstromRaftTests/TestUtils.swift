@@ -16,6 +16,7 @@
 
 import XCTest
 import NIO
+import _Concurrency
 
 
 func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) throws -> [NIO.NIOFileHandle]) throws {
@@ -38,4 +39,21 @@ func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) throws -> [NIO.NIOF
     if let error = error {
         throw error
     }
+}
+
+/// Replace deprecated `runAsyncAndBlock` until XCTest support async
+func runAsyncTestAndBlock(closure: @escaping () async throws -> Void) {
+    let group = DispatchGroup()
+    group.enter()
+
+    _ = Task.runDetached {
+        do {
+            try await closure()
+        } catch {
+            XCTFail("\(error)")
+        }
+        group.leave()
+    }
+
+    group.wait()
 }
