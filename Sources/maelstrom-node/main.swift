@@ -24,9 +24,13 @@ class App {
         config.logger = logger
         let service = try MaelstromRPC(group: group, logger: logger, messageProvider: KvNode(configuration: config))
         lifecycle.register(label: "maelstrom", start: .sync {
-            _ = try service.start()
+            Task.runDetached {
+                try? await service.start()
+            }
         }, shutdown: .sync {
-            service.stop()
+            Task.runDetached {
+                await service.stop()
+            }
             try group.syncShutdownGracefully()
         })
 

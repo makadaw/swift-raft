@@ -5,7 +5,6 @@
 import XCTest
 import Logging
 import NIO
-import _Concurrency
 @testable import MaelstromRaft
 
 class KvNodeTests: XCTestCase {
@@ -35,19 +34,3 @@ class KvNodeTests: XCTestCase {
     }
 }
 
-/// Replace deprecated `runAsyncAndBlock` until XCTest support async
-func runAsyncTestAndBlock(closure: @escaping () async throws -> Void) {
-    let group = DispatchGroup()
-    group.enter()
-
-    _ = Task.runDetached {
-        do {
-            try await closure()
-        } catch {
-            XCTFail("\(error)")
-        }
-        group.leave()
-    }
-
-    group.wait()
-}
