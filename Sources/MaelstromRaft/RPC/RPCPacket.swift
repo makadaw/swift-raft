@@ -8,14 +8,14 @@ import NIO
 import NIOFoundationCompat
 
 public protocol Message: Codable, ConcurrentValue {
-    static var type: String { get }
+    static var messageType: String { get }
 }
 
 public struct Maelstrom {
 
     // RPC error representation
     public enum Error: Int, Swift.Error, Message {
-        public static var type = "error"
+        public static var messageType = "error"
 
         // Indicates that the requested operation could not be completed within a timeout.
         case timeout = 0
@@ -65,7 +65,7 @@ public struct Maelstrom {
     }
 
     public struct `Init`: Message, Equatable {
-        public static let type = "init"
+        public static let messageType = "init"
         public let nodeID: String
         public let nodeIDs: [String]
 
@@ -92,48 +92,48 @@ public struct Maelstrom {
     }
 
     public struct InitOk: Message, Equatable {
-        public static let type = "init_ok"
+        public static let messageType = "init_ok"
     }
 
     public struct Echo: Message, Equatable {
-        public static let type = "echo"
+        public static let messageType = "echo"
         public let echo: String
     }
 
     public struct EchoOk: Message, Equatable {
-        public static let type = "echo_ok"
+        public static let messageType = "echo_ok"
         public let echo: String
     }
 
     public struct Read: Message {
-        public static let type = "read"
+        public static let messageType = "read"
         let key: Int
     }
 
     public struct ReadOk: Message {
-        public static let type = "read_ok"
+        public static let messageType = "read_ok"
         let value: Int
     }
 
     public struct Write: Message {
-        public static let type = "write"
+        public static let messageType = "write"
         let key: Int
         let value: Int
     }
 
     public struct WriteOk: Message {
-        public static let type = "write_ok"
+        public static let messageType = "write_ok"
     }
 
     public struct Cas: Message {
-        public static let type = "cas"
+        public static let messageType = "cas"
         let key: Int
         let from: Int
         let to: Int
     }
 
     public struct CasOk: Message {
-        public static let type = "cas_ok"
+        public static let messageType = "cas_ok"
     }
 }
 
@@ -202,7 +202,7 @@ extension RPCPacket: Codable {
             try body.encode(to: encoder)
             var container = encoder.container(keyedBy: CodingKeys.self)
             // Encode default fields to the container
-            try container.encode(type(of: body).type, forKey: .type)
+            try container.encode(type(of: body).messageType, forKey: .type)
             try container.encodeIfPresent(msgId, forKey: .msgId)
             try container.encodeIfPresent(inReplyTo, forKey: .inReplyTo)
         }
@@ -316,10 +316,10 @@ class RPCPacketCoder: ByteToMessageDecoder, MessageToByteEncoder {
     }
 
     func registerMessage(_ message: Message.Type) throws {
-        guard register[message.type] == nil else {
-            throw RPCPacket.CodingError.typeAlreadyRegistered(type: message.type)
+        guard register[message.messageType] == nil else {
+            throw RPCPacket.CodingError.typeAlreadyRegistered(type: message.messageType)
         }
-        register[message.type] = message.self
+        register[message.messageType] = message.self
     }
 
     func decode(data: Data) throws -> RPCPacket {

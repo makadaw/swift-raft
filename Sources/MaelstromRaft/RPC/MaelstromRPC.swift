@@ -125,15 +125,13 @@ final public actor MaelstromRPC {
     let bootstrap: NIOPipeBootstrap
     let group: EventLoopGroup
 
-    let messageHandler: MessageHandler
+    var messageHandler: MessageHandler?
     var channel: Channel?
 
-    public init(group: EventLoopGroup, logger: Logger, messageProvider: MessageProvider, additionalMessages: [Message.Type] = []) throws {
+    public init(group: EventLoopGroup, logger: Logger, additionalMessages: [Message.Type] = []) throws {
         self.logger = logger
         self.group = group
 
-        let messageHandler = MessageHandler(messageProvider: messageProvider, logger: logger)
-        self.messageHandler = messageHandler
         let coder = RPCPacketCoder(logger: logger)
 
         self.bootstrap = NIOPipeBootstrap(group: group)
@@ -144,21 +142,26 @@ final public actor MaelstromRPC {
                     ByteToMessageHandler(coder),
                     // RPC Message => Bytes
                     MessageToByteHandler(coder),
-                    // RPC Message processor
-                    messageHandler
                 ])
             }
         try registerMessages(in: coder, additionalMessages: additionalMessages)
     }
 
     /// Start a service. Service subscribe on STDIN and response to STDOUT
-    public func start() async throws {
-        try await innerStart(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
+    public func start(messageProvider: MessageProvider) async throws {
+        try await innerStart(
+            messageProvider: messageProvider,
+            inputDescriptor: STDIN_FILENO,
+            outputDescriptor: STDOUT_FILENO)
     }
 
     @discardableResult
-    func innerStart(inputDescriptor: CInt, outputDescriptor: CInt) async throws -> Channel {
+    func innerStart(messageProvider: MessageProvider, inputDescriptor: CInt, outputDescriptor: CInt) async throws -> Channel {
         let channel = try await bootstrap.withPipes(inputDescriptor: inputDescriptor, outputDescriptor: outputDescriptor).get()
+        let messageHandler = MessageHandler(messageProvider: messageProvider, logger: logger)
+        self.messageHandler = messageHandler
+        // Add RPC Message processor
+        try await channel.pipeline.addHandler(messageHandler).get()
         self.channel = channel
         self.logger.info("Maelstrom started and listening on STDIN")
         return channel
@@ -197,7 +200,7 @@ final public actor MaelstromRPC {
     // MARK: Broadcast
     /// Broadcast message into Maelstrom network. Future will be fulfilled when we get an response from Maelstrom network
     public func send(_ message: Message, dest: String) async throws -> Message {
-        guard let channel = self.channel else {
+        guard let channel = self.channel, let messageHandler = self.messageHandler else {
             preconditionFailure("Send a message without starting a channel")
         }
         let packet = messageHandler.createPacket(dest: dest, body: message)

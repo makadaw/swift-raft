@@ -10,12 +10,12 @@ import enum Dispatch.DispatchTimeInterval
 // Node that connect time operations with a Raft logic.
 // We use NIO EvenLoop to schedule election and heartbeat timers.
 // This actor is time depend, and should be used the real code.
-actor Node<ApplicationLog> where ApplicationLog: Log {
+open actor Node<ApplicationLog> where ApplicationLog: Log {
 
     let group: EventLoopGroup
     let config: Configuration
 
-    var logger: Logger {
+    public var logger: Logger {
         config.logger
     }
 
@@ -28,13 +28,13 @@ actor Node<ApplicationLog> where ApplicationLog: Log {
     var electionTimer: Scheduled<Void>?
     var heartbeatTask: RepeatedTask?
 
-    init(group: EventLoopGroup, configuration: Configuration, log: ApplicationLog) {
+    public init(group: EventLoopGroup, configuration: Configuration, log: ApplicationLog) {
         self.group = group
         self.config = configuration
         self.log = log
     }
 
-    func startNode(peers: [SwiftRaft.Peer]) async {
+    public func startNode(peers: [SwiftRaft.Peer]) async {
         raft = Raft(config: config,
                     peers: peers,
                     log: log)

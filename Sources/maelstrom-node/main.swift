@@ -22,10 +22,15 @@ class App {
 
         var config = Configuration(id: 0)
         config.logger = logger
-        let service = try MaelstromRPC(group: group, logger: logger, messageProvider: KvNode(configuration: config))
+        let service = try MaelstromRPC(
+            group: group,
+            logger: logger,
+            additionalMessages: [RequestVote.Request.self,
+                                 RequestVote.Response.self])
+        let node = BootstrapNode(group: group, client: service, configuration: config)
         lifecycle.register(label: "maelstrom", start: .sync {
             Task.runDetached {
-                try? await service.start()
+                try? await service.start(messageProvider: node)
             }
         }, shutdown: .sync {
             Task.runDetached {

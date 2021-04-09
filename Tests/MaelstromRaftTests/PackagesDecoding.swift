@@ -70,3 +70,15 @@ extension RPCPacketCoder {
         return str
     }
 }
+
+func doubleCoding<T: Message>(coder: RPCPacketCoder, of msg: T) throws -> T {
+    let packet = RPCPacket(src: "n1", dest: "n2", id: 0, body: msg)
+    let str = try coder.encodeToString(packet: packet)
+
+    let reversePacket = try coder.decode(string: str)
+    guard let response = reversePacket.body as? T else {
+        XCTFail("Can't cast converted message to the type")
+        throw NSError(domain: "test", code: 1, userInfo: nil)
+    }
+    return response
+}

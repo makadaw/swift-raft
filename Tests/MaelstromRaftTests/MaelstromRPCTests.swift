@@ -31,10 +31,10 @@ class MaelstromRPCTests: XCTestCase {
                             var logger = Logger(label: "PRODUCER")
                             logger.logLevel = .trace
                             return logger
-                        }(),
-                        messageProvider: EchoProvider())
+                        }())
 
-                    try await producer.innerStart(inputDescriptor: FileHandle(fileDescriptor: try pipe1Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
+                    try await producer.innerStart(messageProvider: EchoProvider(),
+                                                  inputDescriptor: FileHandle(fileDescriptor: try pipe1Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
                                                   outputDescriptor: FileHandle(fileDescriptor: try pipe2Write.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor)
 
                     let consumer = try MaelstromRPC(
@@ -43,14 +43,14 @@ class MaelstromRPCTests: XCTestCase {
                             var logger = Logger(label: "CONSUMER")
                             logger.logLevel = .trace
                             return logger
-                        }(),
-                        messageProvider: EchoProvider())
-                    try await consumer.innerStart(inputDescriptor: FileHandle(fileDescriptor: try pipe2Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
+                        }())
+                    try await consumer.innerStart(messageProvider: EchoProvider(),
+                                                  inputDescriptor: FileHandle(fileDescriptor: try pipe2Read.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor,
                                                   outputDescriptor: FileHandle(fileDescriptor: try pipe1Write.takeDescriptorOwnership(), closeOnDealloc: false).fileDescriptor)
 
                     // Force set a node IDs, so it will use it to send requests
-                    producer.messageHandler.nodeID = self.producerID
-                    consumer.messageHandler.nodeID = self.consumerID
+                    await producer.setTestNodeId(self.producerID)
+                    await consumer.setTestNodeId(self.consumerID)
 
                     self.producer = producer
                     self.consumer = consumer
@@ -91,6 +91,12 @@ class MaelstromRPCTests: XCTestCase {
     }
 }
 
+extension MaelstromRPC {
+    func setTestNodeId(_ nodeID: String) async {
+        messageHandler?.nodeID = nodeID
+    }
+}
+
 struct NotSupportedMessage: Message {
-    static var type: String = "not_supported"
+    static var messageType: String = "not_supported"
 }
