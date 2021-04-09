@@ -38,6 +38,24 @@
         }
       },
       {
+        "package": "swift-collections",
+        "repositoryURL": "https://github.com/apple/swift-collections",
+        "state": {
+          "branch": null,
+          "revision": "bd924007a25488900d2e3f3437a0388a97636020",
+          "version": "0.0.1"
+        }
+      },
+      {
+        "package": "swift-collections-benchmark",
+        "repositoryURL": "https://github.com/apple/swift-collections-benchmark",
+        "state": {
+          "branch": null,
+          "revision": "49297647d1c0855eb33ec18cd6ee1181727c159b",
+          "version": "0.0.1"
+        }
+      },
+      {
         "package": "swift-log",
         "repositoryURL": "https://github.com/apple/swift-log",
         "state": {

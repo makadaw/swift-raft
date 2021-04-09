@@ -2,36 +2,37 @@
 // Copyright © 2021 makadaw
 
 
-import SwiftRaft
-import Foundation
+import DequeModule
 
-struct ArrayLog<T: LogData>: Log {
-    typealias Data = T
-    typealias Iterator = Array<LogElement<Data>>.Iterator
+public struct MemoryLog<T: LogData>: Log {
+    public typealias Data = T
+    public typealias Iterator = Deque<LogElement<Data>>.Iterator
 
-    __consuming func makeIterator() -> Iterator {
+    public init() {}
+
+    public __consuming func makeIterator() -> Iterator {
         return storage.makeIterator()
     }
 
     var startIndex: UInt = 1
     var endIndex: UInt = 1
 
-    var logStartIndex: UInt {
+    public var logStartIndex: UInt {
         startIndex
     }
 
-    var logLastIndex: UInt {
+    public var logLastIndex: UInt {
         Swift.max(0, startIndex + UInt(storage.count) - 1)
     }
 
-    var count: Int {
+    public var count: Int {
         storage.count
     }
 
-    var storage: Array<LogElement<Data>> = .init()
+    var storage: Deque<LogElement<Data>> = .init()
 
     /// Runtime safe get method
-    func entry(at position: UInt) throws -> LogElement<Data> {
+    public func entry(at position: UInt) throws -> LogElement<Data> {
         let real = _position(offsetBy: position)
         guard !(real < 0 || real >= storage.count) else {
             throw LogError.outOfRange
@@ -44,7 +45,7 @@ struct ArrayLog<T: LogData>: Log {
         Int(position) - Int(startIndex)
     }
 
-    mutating func append(_ entries: [LogElement<Data>]) -> ClosedRange<UInt> {
+    public mutating func append(_ entries: [LogElement<Data>]) -> ClosedRange<UInt> {
         let firstIndex = startIndex + UInt(storage.count)
         let lastIndex = firstIndex + UInt(entries.count)
         storage.append(contentsOf: entries)
@@ -52,8 +53,8 @@ struct ArrayLog<T: LogData>: Log {
         return ClosedRange(firstIndex..<lastIndex)
     }
 
-    mutating func truncatePrefix(_ firstIndex: UInt) {
-        if (firstIndex > startIndex) {
+    public mutating func truncatePrefix(_ firstIndex: UInt) {
+        if firstIndex > startIndex {
             // remove log entries in range startIndex..<firstIndex
             let end = storage.index(storage.startIndex,
                                     offsetBy: Swift.min(Int(firstIndex - startIndex), storage.count))
@@ -62,7 +63,7 @@ struct ArrayLog<T: LogData>: Log {
         }
     }
 
-    mutating func truncateSuffix(_ lastIndex: UInt) {
+    public mutating func truncateSuffix(_ lastIndex: UInt) {
         if lastIndex < startIndex {
             storage.removeAll()
         } else if Int(lastIndex) < Int(startIndex) - 1 + storage.count {
@@ -71,17 +72,7 @@ struct ArrayLog<T: LogData>: Log {
     }
 
     /// Memory log do not write metadata to any storage
-    var metadata = LogMetadata()
+    public var metadata = LogMetadata()
 }
 
-// Use string as dummy application data
-extension String: LogData {
-
-    public init?(data: Data) {
-        self.init(data: data, encoding: .utf8)
-    }
-
-    public var size: Int {
-        self.data(using: .utf8)?.count ?? 0
-    }
-}
+extension Deque: UnsafeConcurrentValue {}

@@ -11,7 +11,7 @@ final class AppendMessageTests: XCTestCase {
         .init(termID: termID, leaderID: leaderID, prevLogIndex: 0, prevLogTerm: 0, leaderCommit: 0, entries: [])
     }
 
-    var instance: Raft<ArrayLog<String>>!
+    var instance: Raft<MemoryLog<String>>!
     override func setUpWithError() throws {
         instance = buildTestInstance()
     }

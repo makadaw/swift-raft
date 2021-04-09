@@ -16,14 +16,14 @@ extension Raft {
     }
 }
 
-func buildTestInstance(log: ArrayLog<String>? = nil) -> Raft<ArrayLog<String>> {
-    Raft(config: Configuration(id: 1), peers: [], log: log ?? ArrayLog<String>())
+func buildTestInstance(log: MemoryLog<String>? = nil) -> Raft<MemoryLog<String>> {
+    Raft(config: Configuration(id: 1), peers: [], log: log ?? MemoryLog<String>())
 }
 
 final class RaftTests: XCTestCase {
 
     func testInitWithLogTerm() {
-        var log = ArrayLog<String>()
+        var log = MemoryLog<String>()
         log.metadata.termID = 3
         log.metadata.voteFor = 1
         let instance = buildTestInstance(log: log)

@@ -30,7 +30,7 @@ final class ConsensusTests: XCTestCase {
     }
 
     func testVoteRequestCheckLogsIndex() {
-        var log = ArrayLog<String>()
+        var log = MemoryLog<String>()
         _ = log.append([.data(termId: 1, index: 1, content: "Entity")])
         let instance = buildTestInstance(log: log)
         runAsyncTestAndBlock {

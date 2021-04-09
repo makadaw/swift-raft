@@ -3,8 +3,7 @@
 
 
 import XCTest
-import SwiftRaft
-@testable import RaftNIO
+@testable import SwiftRaft
 
 // Use LogCabin test case to validate memory log
 final class MemoryLogTests: XCTestCase {
@@ -113,7 +112,7 @@ final class MemoryLogTests: XCTestCase {
         log.truncatePrefix(506)
         XCTAssertEqual(506, log.startIndex)
         XCTAssertEqual(1, log.count)
-        XCTAssertEqual(sampleEntry.content, log.storage[offset: 0].content)
+        XCTAssertEqual(sampleEntry.content, log.storage[0].content)
 
         // make sure truncating to an earlier id has no effect
         log.truncatePrefix(400)
@@ -153,5 +152,17 @@ final class MemoryLogTests: XCTestCase {
         let map = log.map { _ in 1 }
         XCTAssertEqual(map.count, 2)
         XCTAssertEqual(log.count, 2)
+    }
+}
+
+// Use string as dummy application data
+extension String: LogData {
+
+    public init?(data: Data) {
+        self.init(data: data, encoding: .utf8)
+    }
+
+    public var size: Int {
+        self.data(using: .utf8)?.count ?? 0
     }
 }

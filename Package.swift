@@ -20,6 +20,7 @@ let package = Package(
     dependencies: [
         // Use version from main, wait for next release.
         .package(url: "https://github.com/apple/swift-system", .revision("2e9c1a71185c828416751283b40697725da550b6")),
+        .package(url: "https://github.com/apple/swift-collections", from: "0.0.1"),
         .package(url: "https://github.com/apple/swift-log", from: "1.4.0"),
         .package(url: "https://github.com/grpc/grpc-swift", from: "1.0.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "1.0.0-alpha.6"),
@@ -50,6 +51,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "DequeModule", package: "swift-collections"),
             ],
             swiftSettings: [
                 .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
