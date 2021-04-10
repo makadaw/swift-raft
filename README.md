@@ -36,7 +36,7 @@ Visualisation of the [protocol](http://thesecretlivesofdata.com/raft/)
 
 Run Jepsen tests with [maelstrom](https://github.com/jepsen-io/maelstrom).
 ```
-maelstrom test -w lin-kv --bin maelstrom-node --time-limit 10 --rate 10 --nodes 1 2 3
+maelstrom test -w lin-kv --bin maelstrom-node --time-limit 10 --rate 10 --nodes 1,2,3
 ```
 
 Where `maelstrom-node` is a bin. 
