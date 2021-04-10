@@ -6,10 +6,8 @@ import SwiftRaft
 import NIO
 import GRPC
 
+// This type provides transform Raft messages into GRPC messages and back
 actor GRPCPeer: SwiftRaft.Peer {
-    /// Current node id
-    let myself: NodeID
-
     /// Remote peer configuration, uniq for peer
     let config: Configuration.Peer
 
@@ -19,8 +17,7 @@ actor GRPCPeer: SwiftRaft.Peer {
     private let client: Raft_RaftClientProtocol
     private let group: EventLoopGroup
 
-    init(myself: NodeID, config: Configuration.Peer, rpcConfig: Configuration.RPC, group: EventLoopGroup) {
-        self.myself = myself
+    init(config: Configuration.Peer, rpcConfig: Configuration.RPC, group: EventLoopGroup) {
         self.config = config
         self.rpcConfig = rpcConfig
         self.group = group

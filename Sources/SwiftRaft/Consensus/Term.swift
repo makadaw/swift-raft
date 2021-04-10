@@ -39,7 +39,7 @@ public struct Term {
         Term(myself: myself, id: id + 1, votedFor: myself, leaderID: nil)
     }
 
-    /// This method update term if new term is higher then current. This methods should be called if we get AppendMessage
+    /// This method update term if new term is higher than current. This methods should be called if we get AppendMessage
     /// with higher term, this mean that current node is out of date
     /// - Parameters:
     ///   - newTerm: new term id
@@ -58,7 +58,7 @@ public struct Term {
     ///   - from: node id that proposed it
     /// - Returns: true if node already voted for this term and candidate or accepted new term and vote for the candidate
     mutating public func canAcceptNewTerm(_ term: ID, from: NodeID) -> Bool {
-        if id > term { // Current term is higher, we don't accpet elections from past
+        if id > term { // Current term is higher, we don't accept elections from past
             return false
         } else if id == term && votedFor != from { // We already voted in this term for other candidate
             return false

@@ -8,7 +8,9 @@ import NIO
 import Logging
 import enum Dispatch.DispatchTimeInterval
 
-final public class RaftNIOBootstrap {
+// Create GRPC Server and host a Raft node
+// Provides GRPC clients for peers
+final public class GRPCBootstrap {
 
     let group: EventLoopGroup
     let config: Configuration
@@ -28,8 +30,8 @@ final public class RaftNIOBootstrap {
     public func start() throws {
 
         let node = Node(group: group,
-                               configuration: config,
-                               log: MemoryLog<String>())
+                        configuration: config,
+                        log: MemoryLog<String>())
 
         let server = Server.insecure(group: group)
             .withServiceProviders([GRPCNodeWrapper(node: node)])
@@ -44,7 +46,7 @@ final public class RaftNIOBootstrap {
         }
         load.whenSuccess { address in
             self.logger.debug("Server started on port \(address!.port!)")
-            let peers = self.peers.map({ GRPCPeer(myself: self.config.myself.id, config: $0, rpcConfig: self.config.rpc, group: self.group) })
+            let peers = self.peers.map({ GRPCPeer(config: $0, rpcConfig: self.config.rpc, group: self.group) })
             Task.runDetached {
                 await node.startNode(peers: peers)
             }

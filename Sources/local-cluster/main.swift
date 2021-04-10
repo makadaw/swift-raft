@@ -51,9 +51,9 @@ struct Start: ParsableCommand {
                 config.logger.logLevel = .debug
                 config.protocol.electionTimeout = .milliseconds(2000)
                 config.log.root = tempDirectory.appending("node-\(node.id)")
-                let bootstrap = RaftNIOBootstrap(group: group,
-                                                 config: config,
-                                                 peers: peers.filter({ $0.id != node.id }))
+                let bootstrap = GRPCBootstrap(group: group,
+                                              config: config,
+                                              peers: peers.filter({ $0.id != node.id }))
 
                 lifecycle.register(
                     label: "raft-\(node.id)",

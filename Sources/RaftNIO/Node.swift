@@ -9,7 +9,7 @@ import enum Dispatch.DispatchTimeInterval
 
 // Node that connect time operations with a Raft logic.
 // We use NIO EvenLoop to schedule election and heartbeat timers.
-// This actor is time depend, and should be used the real code.
+// This actor is time depend, and should be used in the real code.
 open actor Node<ApplicationLog> where ApplicationLog: Log {
 
     let group: EventLoopGroup
@@ -19,14 +19,10 @@ open actor Node<ApplicationLog> where ApplicationLog: Log {
         config.logger
     }
 
-    // Raft related properties
+    /// Application log, used to store messages
     var log: ApplicationLog
+    /// Raft logic node
     var raft: Raft<ApplicationLog>!
-    var eventLoop: EventLoop {
-        group.next()
-    }
-    var electionTimer: Scheduled<Void>?
-    var heartbeatTask: RepeatedTask?
 
     public init(group: EventLoopGroup, configuration: Configuration, log: ApplicationLog) {
         self.group = group
@@ -43,6 +39,8 @@ open actor Node<ApplicationLog> where ApplicationLog: Log {
         await onElectionCommand(.scheduleNextTimer(delay: config.protocol.nextElectionTimeout))
     }
 
+    // MARK: Leader election
+    var electionTimer: Scheduled<Void>?
     private func resetElectionTimeout(next delay: DispatchTimeInterval) {
         electionTimer?.cancel()
         electionTimer = eventLoop.scheduleDetachedTask(in: delay, {
@@ -74,6 +72,8 @@ open actor Node<ApplicationLog> where ApplicationLog: Log {
         }
     }
 
+    // MARK: Message send
+    var heartbeatTask: RepeatedTask?
     func onRaftCommands(_ commands: [Raft<ApplicationLog>.EntriesCommand]) async {
         for command in commands {
             switch command {
@@ -100,6 +100,10 @@ open actor Node<ApplicationLog> where ApplicationLog: Log {
 
     func sendHeartBeat() async {
         await onRaftCommands(await raft.sendHeartBeat())
+    }
+
+    var eventLoop: EventLoop {
+        group.next()
     }
 }
 
