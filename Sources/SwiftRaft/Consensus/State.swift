@@ -3,7 +3,7 @@
 
 
 /// Possible states of the Raft node. States represent a state machine and not all changes are legit
-enum State: String {
+enum State: String, ConcurrentValue {
     case follower
     case preCandidate
     case candidate

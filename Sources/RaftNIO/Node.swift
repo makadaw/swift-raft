@@ -108,7 +108,7 @@ open actor Node<ApplicationLog> where ApplicationLog: Log {
 }
 
 // Proxy methods for non actors wrappers
-extension Node {
+public extension Node {
     func onVoteRequest(_ request: RequestVote.Request) async -> RequestVote.Response {
         await raft.onVoteRequest(request)
     }
