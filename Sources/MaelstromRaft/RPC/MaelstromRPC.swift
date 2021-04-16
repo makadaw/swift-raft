@@ -96,7 +96,7 @@ class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
 
     /// Register a message callback based on message ID
     func registerCallback(_ callback: MessageResponseCallback) {
-        responseCallbacks[buildKey(src: callback.src, msgID: callback.msgID)] = callback
+        responseCallbacks[buildKey(src: callback.from, msgID: callback.msgID)] = callback
     }
 
     private func buildKey(src: String, msgID: Int) -> String {
@@ -106,8 +106,9 @@ class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
 
 struct MessageResponseCallback {
     let msgID: Int
-    let src: String
+    let from: String
     let promise: EventLoopPromise<Message>
+    var deadline: Scheduled<Void>?
 }
 
 extension NIOAtomic where T == Int {
@@ -200,7 +201,7 @@ final public actor MaelstromRPC {
 
     // MARK: Broadcast
     /// Broadcast message into Maelstrom network. Future will be fulfilled when we get an response from Maelstrom network
-    public func send(_ message: Message, dest: String) async throws -> Message {
+    public func send(_ message: Message, dest: String, timeout: DispatchTimeInterval = .seconds(1)) async throws -> Message {
         guard let channel = self.channel, let messageHandler = self.messageHandler else {
             preconditionFailure("Send a message without starting a channel")
         }
@@ -208,9 +209,16 @@ final public actor MaelstromRPC {
         guard let msgID = packet.msgID else {
             preconditionFailure("We should not create messages without ID for sending")
         }
-        let promise = group.next().makePromise(of: Message.self)
-        messageHandler.registerCallback(MessageResponseCallback(msgID: msgID, src: dest, promise: promise))
+        let eventLoop = group.next()
+        let promise = eventLoop.makePromise(of: Message.self)
+        let deadline = eventLoop.scheduleTask(in: .nanoseconds(timeout.nanoseconds)) {
+            promise.fail(ClientError.requestTimeout)
+        }
+        messageHandler.registerCallback(MessageResponseCallback(msgID: msgID,
+                                                                from: dest,
+                                                                promise: promise,
+                                                                deadline: deadline))
         _ = channel.writeAndFlush(packet)
         return try await promise.futureResult.get()
-    }
+    }    
 }

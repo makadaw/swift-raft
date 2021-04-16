@@ -8,21 +8,23 @@ actor Peer: SwiftRaft.Peer {
 
     let myself: Configuration.Peer
     let client: PeerClient
+    let config: Configuration.RPC
 
-    init(myself: Configuration.Peer, client: PeerClient) {
+    init(myself: Configuration.Peer, client: PeerClient, config: Configuration.RPC) {
         self.myself = myself
         self.client = client
+        self.config = config
     }
 
     func requestVote(_ request: RequestVote.Request) async throws -> RequestVote.Response {
-        guard let response = try await client.send(request, dest: "\(myself.id)") as? RequestVote.Response else {
+        guard let response = try await client.send(request, dest: "\(myself.id)", timeout: config.voteTimeout) as? RequestVote.Response else {
             fatalError("Wrong type of the response!")
         }
         return response
     }
 
     func sendHeartbeat<T>(_ request: AppendEntries.Request<T>) async throws -> AppendEntries.Response where T : LogData {
-        guard let response = try await client.send(request, dest: "\(myself.id)") as? AppendEntries.Response else {
+        guard let response = try await client.send(request, dest: "\(myself.id)", timeout: config.appendMessageTimeout) as? AppendEntries.Response else {
             fatalError("Wrong type of the response!")
         }
         return response

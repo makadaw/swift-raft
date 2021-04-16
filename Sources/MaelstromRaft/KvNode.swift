@@ -37,11 +37,13 @@ public actor BootstrapNode: MessageProvider {
                     fatalError("Can't cast node ids to Int")
                 }
                 configuration.myself = .init(id: intNodeID, host: "localhost", port: 9000 + Int(intNodeID))
-                let node = KvNode(group: group, configuration: configuration, log: MemoryLog<String>())
+                let node = KvNode(group: group,
+                                  configuration: configuration,
+                                  log: MemoryLog<String>())
                 self.node = node
                 await node.startNode(peers: peers
                                         .map({ Configuration.Peer(id: $0, host: "localhost", port: 0) })
-                                        .map({ Peer(myself: $0, client: peerClient) }))
+                                        .map({ Peer(myself: $0, client: peerClient, config: configuration.rpc) }))
                 return Maelstrom.InitOk()
 
             default:
@@ -87,8 +89,12 @@ extension KvNode: MessageProvider {
     }
 }
 
+enum ClientError: Error {
+    case requestTimeout
+}
+
 public protocol PeerClient: UnsafeConcurrentValue {
-    func send(_ message: Message, dest: String) async throws -> Message
+    func send(_ message: Message, dest: String, timeout: DispatchTimeInterval) async throws -> Message
 }
 
 extension MaelstromRPC: PeerClient {}
