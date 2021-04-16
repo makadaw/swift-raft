@@ -44,7 +44,9 @@ public actor Raft<ApplicationLog: Log> {
     /// States switch machine
     private func _tryMoveTo(nextState: State) -> Bool {
         if state.isValidNext(state: nextState) {
-            self.state = nextState
+            if self.state != nextState {
+                self.state = nextState
+            }
             return true
         }
         return false
@@ -263,7 +265,7 @@ extension Raft {
                     return []
                 })
         } catch {
-            logger.error("Heartbeat error")
+            logger.error("Heartbeat error \(error)")
         }
         return []
     }

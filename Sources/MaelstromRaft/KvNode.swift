@@ -63,6 +63,13 @@ actor KvNode<ApplicationLog>: RaftNIO.Node<ApplicationLog> where ApplicationLog:
 extension KvNode: MessageProvider {
     func onMessage(_ message: Message) async throws -> Message {
         switch message {
+            case let voteRequest as RequestVote.Request:
+                return await onVoteRequest(voteRequest)
+
+            case let append as AppendEntries.Request<ApplicationLog.Data>:
+                return await onAppendEntries(append)
+
+            // Protocol
             case let read as Maelstrom.Read:
                 logger.trace("Key: \(read.key)")
                 if let value = storage[read.key] {
