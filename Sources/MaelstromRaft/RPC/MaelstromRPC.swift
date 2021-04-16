@@ -54,6 +54,7 @@ class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
             } else {
                 callback.promise.succeed(request.body)
             }
+            return
         }
 
         // Run a normal routine for a message. Consumer should process it or return an error
