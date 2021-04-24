@@ -18,6 +18,8 @@ let package = Package(
             targets: ["maelstrom-node"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-nio",
+            .revision("72f5a563286c395e60cc12fa1aecf345b559722e")),
         // Use version from main, wait for next release.
         .package(url: "https://github.com/apple/swift-system", .revision("2e9c1a71185c828416751283b40697725da550b6")),
         .package(url: "https://github.com/apple/swift-collections", from: "0.0.1"),
@@ -60,6 +62,7 @@ let package = Package(
             name: "RaftNIO",
             dependencies: [
                 "SwiftRaft",
+                .product(name: "_NIOConcurrency", package: "swift-nio"),
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Logging", package: "swift-log"),
@@ -78,6 +81,7 @@ let package = Package(
             swiftSettings: [
                 .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
             ]),
+        /// Test tragets
         .testTarget(
             name: "SwiftRaftTests",
             dependencies: [

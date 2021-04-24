@@ -166,7 +166,7 @@ final public actor MaelstromRPC {
         let messageHandler = MessageHandler(messageProvider: messageProvider, logger: logger)
         self.messageHandler = messageHandler
         // Add RPC Message processor
-        try await channel.pipeline.addHandler(messageHandler).get()
+        try await channel.pipeline.addHandler(messageHandler)
         self.channel = channel
         self.logger.info("Maelstrom started and listening on STDIN")
         return channel
@@ -175,7 +175,7 @@ final public actor MaelstromRPC {
     /// Close the channel if it was open. Will not fire an error
     public func stop() async {
         do {
-            try await channel?.close().get()
+            try await channel?.close()
         } catch {
             logger.error("Error shutting down: \(error)")
             return
@@ -221,7 +221,7 @@ final public actor MaelstromRPC {
                                                                 from: dest,
                                                                 promise: promise,
                                                                 deadline: deadline))
-        _ = channel.writeAndFlush(packet)
+        _ = try await channel.writeAndFlush(packet)
         return try await promise.futureResult.get()
     }    
 }

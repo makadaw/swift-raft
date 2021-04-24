@@ -4,6 +4,7 @@
 
 import SwiftRaft
 import NIO
+import _NIOConcurrency
 import GRPC
 
 // This type provides transform Raft messages into GRPC messages and back
