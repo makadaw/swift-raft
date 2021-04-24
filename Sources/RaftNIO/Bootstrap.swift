@@ -10,6 +10,7 @@ import enum Dispatch.DispatchTimeInterval
 
 // Create GRPC Server and host a Raft node
 // Provides GRPC clients for peers
+@available(macOS 9999, *)
 final public class GRPCBootstrap {
 
     let group: EventLoopGroup
@@ -47,7 +48,7 @@ final public class GRPCBootstrap {
         load.whenSuccess { address in
             self.logger.debug("Server started on port \(address!.port!)")
             let peers = self.peers.map({ GRPCPeer(config: $0, rpcConfig: self.config.rpc, group: self.group) })
-            Task.runDetached {
+            detach {
                 await node.startNode(peers: peers)
             }
         }

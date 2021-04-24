@@ -2,7 +2,7 @@
 // Copyright © 2021 makadaw
 
 
-public struct LogMetadata: Equatable, ConcurrentValue {
+public struct LogMetadata: Equatable, Sendable {
     public var termID: Term.ID?
     public var voteFor: NodeID?
 

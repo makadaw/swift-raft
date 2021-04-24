@@ -10,6 +10,7 @@ import enum Dispatch.DispatchTimeInterval
 // Node that connect time operations with a Raft logic.
 // We use NIO EvenLoop to schedule election and heartbeat timers.
 // This actor is time depend, and should be used in the real code.
+@available(macOS 9999, *)
 open actor Node<ApplicationLog> where ApplicationLog: Log {
 
     let group: EventLoopGroup
@@ -108,6 +109,7 @@ open actor Node<ApplicationLog> where ApplicationLog: Log {
 }
 
 // Proxy methods for non actors wrappers
+@available(macOS 9999, *)
 public extension Node {
     func onVoteRequest(_ request: RequestVote.Request) async -> RequestVote.Response {
         await raft.onVoteRequest(request)

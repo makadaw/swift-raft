@@ -5,12 +5,12 @@
 /// Vote request message. Use for both pre and real vote
 public struct RequestVote {
 
-    public enum VoteType: ConcurrentValue {
+    public enum VoteType: Sendable {
         case preVote
         case vote
     }
 
-    public struct Request: ConcurrentValue {
+    public struct Request: Sendable {
         /// Vote type `vote` or `PreVote`
         public let type: VoteType
 
@@ -38,7 +38,7 @@ public struct RequestVote {
 
     }
 
-    public struct Response: ConcurrentValue {
+    public struct Response: Sendable {
         /// Vote type `vote` or `PreVote`, should be the the same as in request
         public let type: VoteType
 

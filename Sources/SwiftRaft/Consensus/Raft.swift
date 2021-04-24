@@ -6,6 +6,7 @@ import struct Dispatch.DispatchTime
 import enum Dispatch.DispatchTimeInterval
 import Logging
 
+@available(macOS 9999, *)
 public actor Raft<ApplicationLog: Log> {
     let config: Configuration
     var logger: Logger {
@@ -54,10 +55,11 @@ public actor Raft<ApplicationLog: Log> {
 }
 
 // MARK: Election
+@available(macOS 9999, *)
 extension Raft {
 
     /// Commands related to changes in election process
-    public enum ElectionCommand: Equatable, ConcurrentValue {
+    public enum ElectionCommand: Equatable, Sendable {
         /// Stop election timer, this means that node not in a follower state
         case stopTimer
 
@@ -131,24 +133,23 @@ extension Raft {
 
         // TODO Handle errors correctly
         // swiftlint:disable:next force_try
-        let result = try! await Task.withGroup(resultType: Bool.self, returning: Bool.self) { group in
-
+        let result = await withThrowingTaskGroup(of: Bool.self, returning: Bool.self) { group in
             // Vote for ourself, need it for one node cluster to work
-            await group.add(operation: {
+            group.spawn {
                 true
-            })
+            }
 
             // We should stop election at the moment when we got quorum
             for peer in peers {
                 // We should stop election at the moment when we got quorum
-                await group.add(operation: {
+                group.spawn {
                     let request = RequestVote.Request(type: type,
                                                       termID: termID,
                                                       candidateID: myself,
                                                       lastLogIndex: 0,
                                                       lastLogTerm: 0)
                     return try await peer.requestVote(request).voteGranted
-                })
+                }
             }
 
             do {
@@ -199,9 +200,10 @@ extension Raft {
 }
 
 // MARK: Entries
+@available(macOS 9999, *)
 extension Raft {
 
-    public enum EntriesCommand: ConcurrentValue, Equatable {
+    public enum EntriesCommand: Sendable, Equatable {
         /// For non leader state reset an election timer
         case resetElectionTimer(delay: DispatchTimeInterval)
 
@@ -212,7 +214,7 @@ extension Raft {
         case stepDown
     }
 
-    public struct AppendResponse: ConcurrentValue {
+    public struct AppendResponse: Sendable {
         public let response: AppendEntries.Response
 
         public let commands: [EntriesCommand]
@@ -241,12 +243,11 @@ extension Raft {
         let termID = term.id
         // Send heartbeat to all peers
         do {
-            return try await Task.withGroup(
-                resultType: AppendEntries.Response.self,
-                returning: [EntriesCommand].self,
-                body: { group in
+            return try await withThrowingTaskGroup(
+                of: AppendEntries.Response.self,
+                returning: [EntriesCommand].self) { group in
                     for peer in self.peers {
-                        await group.add(operation: {
+                        group.spawn(operation: {
                             let request = AppendEntries.Request<ApplicationLog.Data>(
                                 termID: termID,
                                 leaderID: myself,
@@ -263,7 +264,7 @@ extension Raft {
                         }
                     }
                     return []
-                })
+                }
         } catch {
             logger.error("Heartbeat error \(error)")
         }

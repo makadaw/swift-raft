@@ -5,6 +5,7 @@
 import XCTest
 @testable import SwiftRaft
 
+@available(macOS 9999, *)
 extension Raft {
     func getTerm() async -> Term {
         term
@@ -16,10 +17,12 @@ extension Raft {
     }
 }
 
+@available(macOS 9999, *)
 func buildTestInstance(log: MemoryLog<String>? = nil) -> Raft<MemoryLog<String>> {
     Raft(config: Configuration(id: 1), peers: [], log: log ?? MemoryLog<String>())
 }
 
+@available(macOS 9999, *)
 final class RaftTests: XCTestCase {
 
     func testInitWithLogTerm() {

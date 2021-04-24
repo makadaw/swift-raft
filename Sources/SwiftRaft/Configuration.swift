@@ -8,7 +8,7 @@ import Logging
 
 public typealias NodeID = UInt64
 
-public struct Configuration: ConcurrentValue {
+public struct Configuration: Sendable {
 
     /// Current node configuration
     public var myself: Peer
@@ -38,7 +38,7 @@ public struct Configuration: ConcurrentValue {
 }
 
 public extension Configuration {
-    struct Consensus: ConcurrentValue {
+    struct Consensus: Sendable {
 
         /// Election timeout. Use as a min time interval.
         public var electionTimeout: DispatchTimeInterval = .milliseconds(5000) {
@@ -65,7 +65,7 @@ public extension Configuration {
 
     }
 
-    struct Peer: ConcurrentValue {
+    struct Peer: Sendable {
 
         /// Identifier of the peer
         /// Each peer id including self should be uniq
@@ -84,13 +84,13 @@ public extension Configuration {
         }
     }
 
-    struct Log: ConcurrentValue {
+    struct Log: Sendable {
 
         /// Root folder for a log instance
         public var root: FilePath
     }
 
-    struct RPC: ConcurrentValue {
+    struct RPC: Sendable {
 
         /// Timeout for RPC vote messages. Should be set according to cluster abilities and should be less then Raft timeouts
         public var voteTimeout: DispatchTimeInterval = .milliseconds(100)
@@ -102,6 +102,6 @@ public extension Configuration {
 }
 
 extension Configuration.Peer: Equatable {}
-extension FilePath: UnsafeConcurrentValue {}
-extension DispatchTimeInterval: UnsafeConcurrentValue {}
-extension Logger: UnsafeConcurrentValue {}
+extension FilePath: UnsafeSendable {}
+extension DispatchTimeInterval: UnsafeSendable {}
+extension Logger: UnsafeSendable {}

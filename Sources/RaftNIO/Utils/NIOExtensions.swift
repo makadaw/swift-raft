@@ -11,10 +11,11 @@ extension DispatchTimeInterval {
     }
 }
 
+@available(macOS 9999, *)
 extension EventLoop {
-    func scheduleDetachedTask(in interval: DispatchTimeInterval, _ task: @escaping @concurrent () async -> Void) -> NIO.Scheduled<Void> {
+    func scheduleDetachedTask(in interval: DispatchTimeInterval, _ task: @escaping @Sendable () async -> Void) -> NIO.Scheduled<Void> {
         scheduleTask(in: interval.timeAmount) {
-            Task.runDetached {
+            detach {
                 await task()
             }
         }
@@ -22,16 +23,17 @@ extension EventLoop {
 
     func scheduleRepeatedAsyncTask(initialDelay: TimeAmount,
                                    delay: DispatchTimeInterval,
-                                   _ task: @escaping @concurrent () async -> Void) -> RepeatedTask {
+                                   _ task: @escaping @Sendable () async -> Void) -> RepeatedTask {
         scheduleRepeatedTask(initialDelay: initialDelay,
                              delay: delay.timeAmount) { _ in
-            Task.runDetached {
+            detach {
                 await task()
             }
         }
     }
 }
 
+@available(macOS 9999, *)
 extension EventLoopFuture {
     public func get() async throws -> Value {
         return try await withUnsafeThrowingContinuation { cont in

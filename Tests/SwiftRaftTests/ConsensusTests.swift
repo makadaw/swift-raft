@@ -5,6 +5,7 @@
 import XCTest
 @testable import SwiftRaft
 
+@available(macOS 9999, *)
 final class ConsensusTests: XCTestCase {
 
     func testElection() {

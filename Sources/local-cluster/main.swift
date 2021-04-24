@@ -11,6 +11,7 @@ import SystemPackage
 import ArgumentParser
 import enum Dispatch.DispatchTimeInterval
 
+@available(macOS 9999, *)
 struct Start: ParsableCommand {
     @Argument(help: "list of peers in format `<id>:<host>:<port>`")
     var peers: [String] = []
@@ -84,4 +85,9 @@ struct Start: ParsableCommand {
     }
 }
 
-Start.main()
+if #available(macOS 9999, *) {
+    Start.main()
+} else {
+    print("Unsupported MacOS version")
+    exit(1)
+}

@@ -7,6 +7,7 @@ import NIO
 import GRPC
 
 // Glue class that connect GRPC (NIO) runtime with Raft actors
+@available(macOS 9999, *)
 class GRPCNodeWrapper<ApplicationLog>: Raft_RaftProvider where ApplicationLog: Log {
     var interceptors: Raft_RaftServerInterceptorFactoryProtocol? {
         nil
@@ -21,7 +22,7 @@ class GRPCNodeWrapper<ApplicationLog>: Raft_RaftProvider where ApplicationLog: L
     func requestVote(request: Raft_RequestVote.Request, context: StatusOnlyCallContext) -> EventLoopFuture<Raft_RequestVote.Response> {
         let promise = context.eventLoop.makePromise(of: Raft_RequestVote.Response.self)
         let node = self.node
-        Task.runDetached {
+        detach {
             let raftRequest = RequestVote.Request(type: request.type == .vote ? .vote : .preVote,
                                                   termID: request.term,
                                                   candidateID: request.candidateID,
@@ -40,7 +41,7 @@ class GRPCNodeWrapper<ApplicationLog>: Raft_RaftProvider where ApplicationLog: L
     func appendEntries(request: Raft_AppendEntries.Request, context: StatusOnlyCallContext) -> EventLoopFuture<Raft_AppendEntries.Response> {
         let promise = context.eventLoop.makePromise(of: Raft_AppendEntries.Response.self)
         let node = self.node
-        Task.runDetached {
+        detach {
             let raftReqeust = AppendEntries.Request<ApplicationLog.Data>(termID: request.term,
                                                                          leaderID: request.leaderID,
                                                                          prevLogIndex: request.prevLogIndex,
@@ -57,6 +58,6 @@ class GRPCNodeWrapper<ApplicationLog>: Raft_RaftProvider where ApplicationLog: L
     }
 }
 
-extension Raft_AppendEntries.Request: UnsafeConcurrentValue {}
-extension Raft_RequestVote.Request: UnsafeConcurrentValue {}
-extension EventLoopPromise: UnsafeConcurrentValue {}
+extension Raft_AppendEntries.Request: UnsafeSendable {} 
+extension Raft_RequestVote.Request: UnsafeSendable {}
+extension EventLoopPromise: UnsafeSendable {}

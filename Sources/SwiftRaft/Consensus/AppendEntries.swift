@@ -4,7 +4,7 @@
 
 public struct AppendEntries {
 
-    public struct Request<T: LogData>: ConcurrentValue {
+    public struct Request<T: LogData>: Sendable {
         public typealias Element = LogElement<T>
 
         /// Current leader term id. Followers use them to validate correctness
@@ -41,7 +41,7 @@ public struct AppendEntries {
         }
     }
 
-    public struct Response: ConcurrentValue {
+    public struct Response: Sendable {
         /// Current node term, for leader to update itself
         public let termID: Term.ID
 

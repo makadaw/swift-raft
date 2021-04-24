@@ -7,6 +7,7 @@ import NIO
 import GRPC
 
 // This type provides transform Raft messages into GRPC messages and back
+@available(macOS 9999, *)
 actor GRPCPeer: SwiftRaft.Peer {
     /// Remote peer configuration, uniq for peer
     let config: Configuration.Peer

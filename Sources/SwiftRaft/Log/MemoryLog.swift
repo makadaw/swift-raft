@@ -75,4 +75,4 @@ public struct MemoryLog<T: LogData>: Log {
     public var metadata = LogMetadata()
 }
 
-extension Deque: UnsafeConcurrentValue {}
+extension Deque: UnsafeSendable {}

@@ -5,6 +5,7 @@
 import XCTest
 @testable import SwiftRaft
 
+@available(macOS 9999, *)
 final class AppendMessageTests: XCTestCase {
 
     func heartBeatRequest(termID: Term.ID, leaderID: NodeID) -> AppendEntries.Request<String> {
@@ -71,6 +72,7 @@ final class AppendMessageTests: XCTestCase {
     }
 }
 
+@available(macOS 9999, *)
 extension Raft.EntriesCommand {
     var isScheduleHeartBeatTask: Bool {
         switch self {
