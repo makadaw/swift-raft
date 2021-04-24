@@ -9,6 +9,7 @@ import Logging
 import enum Dispatch.DispatchTimeInterval
 
 
+@available(macOS 9999, *)
 public actor BootstrapNode: MessageProvider {
 
     let group: EventLoopGroup
@@ -56,10 +57,12 @@ public actor BootstrapNode: MessageProvider {
     }
 }
 
+@available(macOS 9999, *)
 actor KvNode<ApplicationLog>: RaftNIO.Node<ApplicationLog> where ApplicationLog: Log {
     var storage: [Int: Int] = [:]
 }
 
+@available(macOS 9999, *)
 extension KvNode: MessageProvider {
     func onMessage(_ message: Message) async throws -> Message {
         switch message {
@@ -100,8 +103,9 @@ enum ClientError: Error {
     case requestTimeout
 }
 
-public protocol PeerClient: UnsafeConcurrentValue {
+public protocol PeerClient: UnsafeSendable {
     func send(_ message: Message, dest: String, timeout: DispatchTimeInterval) async throws -> Message
 }
 
+@available(macOS 9999, *)
 extension MaelstromRPC: PeerClient {}

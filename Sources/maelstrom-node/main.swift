@@ -9,6 +9,7 @@ import Logging
 import Lifecycle
 
 
+@available(macOS 9999, *)
 class App {
 
     func run() throws {
@@ -29,11 +30,11 @@ class App {
                                  RequestVote.Response.self])
         let node = BootstrapNode(group: group, client: service, configuration: config)
         lifecycle.register(label: "maelstrom", start: .sync {
-            Task.runDetached {
+            detach {
                 try? await service.start(messageProvider: node)
             }
         }, shutdown: .sync {
-            Task.runDetached {
+            detach {
                 await service.stop()
             }
             try group.syncShutdownGracefully()
@@ -43,4 +44,9 @@ class App {
     }
 }
 
-try App().run()
+if #available(macOS 9999, *) {
+    try App().run()
+} else {
+    print("Unsupported MacOS version")
+    exit(1)
+}

@@ -11,12 +11,14 @@ import NIOFoundationCompat
 
 /// Process messages from the network. Here consumer get all messages from the network that is not a responses
 /// It may also contain errors (eg: if processor get a message with unsupported type)
+@available(macOS 9999, *)
 public protocol MessageProvider: Actor {
     func onMessage(_ message: Message) async throws -> Message
 }
 
 /// Message handler is responsible for connecting NIO runtime with actors handlers.
-class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
+@available(macOS 9999, *)
+class MessageHandler: ChannelDuplexHandler, UnsafeSendable {
     typealias InboundIn = RPCPacket
     typealias OutboundIn = RPCPacket
     typealias OutboundOut = RPCPacket
@@ -59,7 +61,7 @@ class MessageHandler: ChannelDuplexHandler, UnsafeConcurrentValue {
 
         // Run a normal routine for a message. Consumer should process it or return an error
         // Run a coroutine to get a response and write into the context
-        Task.runDetached {
+        detach {
             let response: RPCPacket
             do {
                 let message = try await self.messageProvider.onMessage(request.body)
@@ -118,9 +120,10 @@ extension NIOAtomic where T == Int {
     }
 }
 
-extension ChannelHandlerContext: UnsafeConcurrentValue {}
+extension ChannelHandlerContext: UnsafeSendable {}
 
 /// Maelstrom RPC messages service
+@available(macOS 9999, *)
 final public actor MaelstromRPC {
 
     let logger: Logger

@@ -7,7 +7,7 @@ import Logging
 import NIO
 import NIOFoundationCompat
 
-public protocol Message: Codable, ConcurrentValue {
+public protocol Message: Codable, Sendable {
     static var messageType: String { get }
 }
 
@@ -137,7 +137,7 @@ public struct Maelstrom {
     }
 }
 
-struct RPCPacket: ConcurrentValue {
+struct RPCPacket: Sendable {
     // Decoder user info key. Use to store a mapping
     static let key: CodingUserInfoKey = CodingUserInfoKey(rawValue: "MessageMapping")!
 
@@ -169,7 +169,7 @@ struct RPCPacket: ConcurrentValue {
 
 extension RPCPacket: Codable {
     /// Use "smart" struct to get msgID, replyID from message body
-    struct ParseMessage: Codable, ConcurrentValue {
+    struct ParseMessage: Codable, Sendable {
         let body: Message
         let msgId: Int?
         let inReplyTo: Int?
