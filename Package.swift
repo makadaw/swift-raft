@@ -37,7 +37,7 @@ let package = Package(
                 .product(name: "Lifecycle", package: "swift-service-lifecycle"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            exclude: ["Proto/example.proto", "Proto/log.proto"]),
+            exclude: ["Proto/example.proto"]),
         .target(
             name: "maelstrom-node",
             dependencies: [
