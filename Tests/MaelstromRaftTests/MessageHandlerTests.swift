@@ -8,7 +8,7 @@ import NIO
 @testable import MaelstromRaft
 
 class MessageHandlerTests: XCTestCase {
-
+    @available(macOS 9999, *)
     func testInitMessageResponse() throws {
         let echoHandler = MessageHandler(messageProvider: EchoProvider(), logger: Logger(label: "tests"))
 

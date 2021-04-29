@@ -42,11 +42,12 @@ func withPipe(_ body: (NIO.NIOFileHandle, NIO.NIOFileHandle) throws -> [NIO.NIOF
 }
 
 /// Replace deprecated `runAsyncAndBlock` until XCTest support async
+@available(macOS 9999, *)
 func runAsyncTestAndBlock(closure: @escaping () async throws -> Void) {
     let group = DispatchGroup()
     group.enter()
 
-    _ = Task.runDetached {
+    _ = detach {
         do {
             try await closure()
         } catch {

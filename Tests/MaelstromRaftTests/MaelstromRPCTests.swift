@@ -8,6 +8,7 @@ import NIO
 import RaftNIO
 @testable import MaelstromRaft
 
+@available(macOS 9999, *)
 class MaelstromRPCTests: XCTestCase {
 
     var group: MultiThreadedEventLoopGroup! = nil
@@ -91,6 +92,7 @@ class MaelstromRPCTests: XCTestCase {
     }
 }
 
+@available(macOS 9999, *)
 extension MaelstromRPC {
     func setTestNodeId(_ nodeID: String) async {
         messageHandler?.nodeID = nodeID

@@ -7,6 +7,7 @@ import Logging
 import NIO
 @testable import MaelstromRaft
 
+@available(macOS 9999, *)
 class KvNodeTests: XCTestCase {
 
     func testInit() throws {
@@ -20,7 +21,7 @@ class KvNodeTests: XCTestCase {
 }
 
 class TestClient: PeerClient {
-    func send(_ message: Message, dest: String) async throws -> Message {
+    func send(_ message: Message, dest: String, timeout: DispatchTimeInterval) async throws -> Message {
         fatalError("Not Implemented")
     }
 }
