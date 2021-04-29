@@ -46,7 +46,10 @@ let package = Package(
                 .product(name: "Lifecycle", package: "swift-service-lifecycle"),
             ],
             swiftSettings: [
-                .unsafeFlags(["-Xfrontend", "-enable-experimental-concurrency"])
+                .unsafeFlags([
+                    "-Xfrontend", "-disable-availability-checking",
+                    "-Xfrontend", "-enable-experimental-concurrency"
+                ])
             ]),
         .target(
             name: "SwiftRaft",

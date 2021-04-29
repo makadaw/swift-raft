@@ -58,8 +58,23 @@ public actor BootstrapNode: MessageProvider {
 }
 
 @available(macOS 9999, *)
-actor KvNode<ApplicationLog>: RaftNIO.Node<ApplicationLog> where ApplicationLog: Log {
+actor KvNode<ApplicationLog> where ApplicationLog: Log {
+    let node: RaftNIO.Node<ApplicationLog>
+    let configuration: Configuration
     var storage: [Int: Int] = [:]
+
+    var logger: Logger {
+        configuration.logger
+    }
+
+    public init(group: EventLoopGroup, configuration: Configuration, log: ApplicationLog) {
+        self.configuration = configuration
+        self.node = .init(group: group, configuration: configuration, log: log)
+    }
+
+    public func startNode(peers: [SwiftRaft.Peer]) async {
+        await node.startNode(peers: peers)
+    }
 }
 
 @available(macOS 9999, *)
@@ -67,10 +82,10 @@ extension KvNode: MessageProvider {
     func onMessage(_ message: Message) async throws -> Message {
         switch message {
             case let voteRequest as RequestVote.Request:
-                return await onVoteRequest(voteRequest)
+                return await node.onVoteRequest(voteRequest)
 
             case let append as AppendEntries.Request<ApplicationLog.Data>:
-                return await onAppendEntries(append)
+                return await node.onAppendEntries(append)
 
             // Protocol
             case let read as Maelstrom.Read:
