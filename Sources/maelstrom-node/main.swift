@@ -27,7 +27,9 @@ class App {
             group: group,
             logger: logger,
             additionalMessages: [RequestVote.Request.self,
-                                 RequestVote.Response.self])
+                                 RequestVote.Response.self,
+                                 AppendEntries.Request<String>.self,
+                                 AppendEntries.Response.self])
         let node = BootstrapNode(group: group, client: service, configuration: config)
         lifecycle.register(label: "maelstrom", start: .sync {
             detach {
