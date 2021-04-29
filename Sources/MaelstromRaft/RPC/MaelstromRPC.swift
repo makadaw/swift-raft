@@ -64,6 +64,13 @@ class MessageHandler: ChannelDuplexHandler, UnsafeSendable {
         detach {
             let response: RPCPacket
             do {
+                // We can get a message before actual initialisation of the node, in this case just
+                // throw an error back into maelstrom network
+                if self.nodeID == nil {
+                    self.logger.debug("Got message before init")
+                    throw Maelstrom.Error.nodeNotFound
+                }
+                // Do a proper message process
                 let message = try await self.messageProvider.onMessage(request.body)
                 response = self.createPacket(dest: request.src, id: request.id, inReplyTo: request.msgID, body: message)
             } catch {
